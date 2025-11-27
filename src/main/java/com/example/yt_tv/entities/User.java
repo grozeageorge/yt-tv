@@ -1,4 +1,4 @@
-package com.example.yt_tv.entity;
+package com.example.yt_tv.entities;
 
 import jakarta.persistence.*;
 import lombok.Getter;

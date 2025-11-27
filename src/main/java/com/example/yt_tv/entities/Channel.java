@@ -1,4 +1,4 @@
-package com.example.yt_tv.entity;
+package com.example.yt_tv.entities;
 
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -6,6 +6,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "channels")
@@ -24,8 +26,8 @@ public class Channel {
     @Column(nullable = false)
     private String thumbnailUrl;
 
-    @Column(nullable = false)
-    private String category;
+    @OneToMany(mappedBy = "channel")
+    private List<PlaylistChannel> playlistChannels = new ArrayList<>();
 
     @Column(nullable = false)
     private Instant lastSync;
