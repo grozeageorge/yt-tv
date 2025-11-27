@@ -1,4 +1,4 @@
-package com.example.yt_tv.entity;
+package com.example.yt_tv.entities;
 
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -22,8 +22,5 @@ public class WatchedVideo {
     private Video video;
 
     @Column(nullable = false)
-    private boolean liked;
-
-    @Column(nullable = false)
-    private Long watchedDuration; // in seconds
+    private boolean watched = false;
 }
