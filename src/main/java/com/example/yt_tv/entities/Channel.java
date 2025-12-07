@@ -1,9 +1,7 @@
 package com.example.yt_tv.entities;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -11,7 +9,7 @@ import java.util.List;
 
 @Entity
 @Table(name = "channels")
-@Getter @Setter @NoArgsConstructor
+@Getter @Setter @NoArgsConstructor @Builder @AllArgsConstructor
 public class Channel {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

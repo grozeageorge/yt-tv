@@ -1,9 +1,6 @@
 package com.example.yt_tv.dtos;
 
-import com.example.yt_tv.entities.Channel;
-import com.example.yt_tv.entities.Playlist;
-import com.example.yt_tv.entities.PlaylistChannel;
-import com.example.yt_tv.entities.User;
+import com.example.yt_tv.entities.*;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
@@ -86,11 +83,23 @@ public class DtoMapper {
     }
 
     public PlaylistDto toPlaylistDto(Playlist saved) {
-        if (saved == null)
-            return null;
+        if (saved == null) return null;
         PlaylistDto dto = new PlaylistDto();
         dto.setId(saved.getId());
         dto.setName(saved.getName());
+
+        // Add user ID mapping if needed for UI
+        if (saved.getUser() != null) {
+            dto.setUserId(saved.getUser().getId());
+        }
+
+        // MAP THE CHANNELS
+        if (saved.getPlaylistChannels() != null) {
+            List<PlaylistChannelDto> channelDtos = saved.getPlaylistChannels().stream()
+                    .map(this::toPlaylistChannelDto)
+                    .toList();
+            dto.setChannels(channelDtos);
+        }
         return dto;
     }
 
@@ -98,5 +107,50 @@ public class DtoMapper {
         if (playlist == null || playlistUpdateDto == null)
             return;
         playlist.setName(playlistUpdateDto.getName());
+    }
+
+    public VideoDto toVideoDto(Video video) {
+        if (video == null)
+            return null;
+        VideoDto dto = new VideoDto();
+        dto.setId(video.getId());
+        dto.setTitle(video.getTitle());
+        dto.setThumbnailUrl(video.getThumbnailUrl());
+        dto.setYtVideoId(video.getYtVideoId());
+        dto.setChannelId(video.getChannel() != null ? video.getChannel().getId() : null);
+        return dto;
+    }
+
+    public Video toVideoEntity(VideoCreateDto videoCreateDto, Channel channel) {
+        if (videoCreateDto == null)
+            return null;
+
+        Video video = new Video();
+        video.setTitle(videoCreateDto.getTitle());
+        video.setThumbnailUrl(videoCreateDto.getThumbnailUrl());
+        video.setYtVideoId(videoCreateDto.getYtVideoId());
+        video.setChannel(channel);
+        return video;
+    }
+
+    public WatchedVideoDto toWatchedVideoDto(WatchedVideo watchedVideo) {
+        if (watchedVideo == null)
+            return null;
+        WatchedVideoDto dto = new WatchedVideoDto();
+        dto.setId(watchedVideo.getId());
+        dto.setVideoId(watchedVideo.getVideo() != null ? watchedVideo.getVideo().getId() : null);
+        dto.setUserId(watchedVideo.getUser() != null ? watchedVideo.getUser().getId() : null);
+        dto.setWatched(watchedVideo.isWatched());
+        return dto;
+    }
+
+    public WatchedVideo toWatchedVideoEntity(User user, Video video) {
+        if (user == null || video == null)
+            return null;
+        WatchedVideo watchedVideo = new WatchedVideo();
+        watchedVideo.setUser(user);
+        watchedVideo.setVideo(video);
+        watchedVideo.setWatched(false);
+        return watchedVideo;
     }
 }

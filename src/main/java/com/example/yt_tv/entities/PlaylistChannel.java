@@ -1,15 +1,15 @@
 package com.example.yt_tv.entities;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 @Entity
 @Table(name = "playlist_channels")
 @Getter
 @Setter
 @NoArgsConstructor
+@Builder
+@AllArgsConstructor
 public class PlaylistChannel {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

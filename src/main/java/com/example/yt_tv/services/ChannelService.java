@@ -28,7 +28,7 @@ public class ChannelService {
     public ChannelDto get(Long id) {
         return channelRepository.findById(id)
                 .map(dtoMapper::toChannelDto)
-                .orElseThrow(() -> new IllegalArgumentException("Channel not found"));
+                .orElseThrow(() -> new IllegalArgumentException("Channel not found with id: " + id));
     }
 
     @Transactional(readOnly = true)
@@ -41,7 +41,7 @@ public class ChannelService {
     @Transactional
     public ChannelDto update(Long id, ChannelCreateDto channelCreateDto) {
         Channel channel = channelRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Channel not found"));
+                .orElseThrow(() -> new IllegalArgumentException("Channel not found with id: " + id));
         channel.setYtChannelId(channelCreateDto.getYtChannelId());
         channel.setName(channelCreateDto.getName());
         channel.setThumbnailUrl(channelCreateDto.getThumbnailUrl());
@@ -57,7 +57,7 @@ public class ChannelService {
     @Transactional
     public ChannelDto updateLastSync(Long id, Instant newSync) {
         Channel channel = channelRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Channel not found"));
+                .orElseThrow(() -> new IllegalArgumentException("Channel not found with id: " + id));
         channel.setLastSync(newSync);
         Channel updated = channelRepository.save(channel);
         return dtoMapper.toChannelDto(updated);

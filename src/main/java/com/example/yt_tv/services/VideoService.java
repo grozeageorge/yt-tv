@@ -1,5 +1,8 @@
 package com.example.yt_tv.services;
 
+import com.example.yt_tv.dtos.DtoMapper;
+import com.example.yt_tv.dtos.VideoCreateDto;
+import com.example.yt_tv.dtos.VideoDto;
 import com.example.yt_tv.entities.Channel;
 import com.example.yt_tv.entities.Video;
 import com.example.yt_tv.repositories.ChannelRepository;
@@ -9,40 +12,56 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class VideoService {
     private final VideoRepository videoRepository;
     private final ChannelRepository channelRepository;
+    private final DtoMapper dtoMapper;
 
     @Transactional
-    public Video create(Video data, Long channelId) {
+    public VideoDto createVideo(VideoCreateDto videoCreateDto, Long channelId) {
+        if (videoCreateDto == null)
+            throw new IllegalArgumentException("VideoCreateDto is required");
+        if (channelId == null)
+            throw new IllegalArgumentException("ChannelId is required");
+
         Channel channel = channelRepository.findById(channelId)
-                .orElseThrow(() -> new IllegalArgumentException("Channel not found"));
+                .orElseThrow(() -> new IllegalArgumentException("Channel not found with id: " + channelId));
 
-        Video video = new Video();
-        video.setYtVideoId(data.getYtVideoId());
-        video.setTitle(data.getTitle());
-        video.setThumbnailUrl(data.getThumbnailUrl());
-        video.setChannel(channel);
-
-        return videoRepository.save(video);
+        Video video = dtoMapper.toVideoEntity(videoCreateDto, channel);
+        Video saved = videoRepository.save(video);
+        return dtoMapper.toVideoDto(saved);
     }
 
     @Transactional(readOnly = true)
-    public Video get(Long id) {
-        return videoRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Video not found"));
+    public VideoDto get(Long id) {
+        Video video = videoRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Video not found with id: " + id));
+        return dtoMapper.toVideoDto(video);
     }
 
     @Transactional(readOnly = true)
-    public List<Video> list() {
-        return videoRepository.findAll();
+    public VideoDto getRandomVideoFromChannel(Long channelId) {
+        return videoRepository.findRandomByChannelId(channelId)
+                .map(dtoMapper::toVideoDto)
+                .orElse(null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<VideoDto> list() {
+        return videoRepository.findAll().stream()
+                .map(dtoMapper::toVideoDto)
+                .collect(Collectors.toList());
     }
 
     @Transactional
-    public Video update(Long id, Video updatedVideo, Long channelId) {
+    public VideoDto update(Long id, VideoCreateDto updateDto, Long channelId) {
+        if (updateDto == null)
+            throw new IllegalArgumentException("VideoCreateDto is required");
+
         Video video = videoRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Video not found"));
 
@@ -52,11 +71,12 @@ public class VideoService {
             video.setChannel(channel);
         }
 
-        video.setYtVideoId(updatedVideo.getYtVideoId());
-        video.setTitle(updatedVideo.getTitle());
-        video.setThumbnailUrl(updatedVideo.getThumbnailUrl());
+        video.setYtVideoId(updateDto.getYtVideoId());
+        video.setTitle(updateDto.getTitle());
+        video.setThumbnailUrl(updateDto.getThumbnailUrl());
 
-        return videoRepository.save(video);
+        Video saved = videoRepository.save(video);
+        return dtoMapper.toVideoDto(saved);
     }
 
     @Transactional
@@ -65,7 +85,9 @@ public class VideoService {
     }
 
     @Transactional(readOnly = true)
-    public List<Video> listByChannel(Long channelId) {
-        return videoRepository.findByChannelId(channelId);
+    public List<VideoDto> listByChannel(Long channelId) {
+        return videoRepository.findByChannelId(channelId).stream()
+                .map(dtoMapper::toVideoDto)
+                .collect(Collectors.toList());
     }
 }

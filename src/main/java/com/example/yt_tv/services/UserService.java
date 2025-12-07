@@ -27,7 +27,7 @@ public class UserService {
     public UserDto get (Long id) {
         return userRepository.findById(id)
                 .map(dtoMapper::toUserDto)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+                .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + id));
     }
 
     @Transactional(readOnly = true)
@@ -40,7 +40,7 @@ public class UserService {
     @Transactional
     public UserDto update(Long id, UserCreateDto userCreateDto) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+                .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + id));
         user.setUsername(userCreateDto.getUsername());
         user.setEmail(userCreateDto.getEmail());
         user.setPassword(userCreateDto.getPassword());

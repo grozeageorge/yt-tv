@@ -1,5 +1,7 @@
 package com.example.yt_tv.services;
 
+import com.example.yt_tv.dtos.DtoMapper;
+import com.example.yt_tv.dtos.WatchedVideoDto;
 import com.example.yt_tv.entities.User;
 import com.example.yt_tv.entities.Video;
 import com.example.yt_tv.entities.WatchedVideo;
@@ -11,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -19,8 +22,9 @@ public class WatchedVideoService {
     private final WatchedVideoRepository watchedVideoRepository;
     private final UserRepository userRepository;
     private final VideoRepository videoRepository;
+    private final DtoMapper dtoMapper;
 
-    public WatchedVideo markWatched(Long userId, Long videoId) {
+    public WatchedVideoDto markWatched(Long userId, Long videoId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
         Video video = videoRepository.findById(videoId)
@@ -28,31 +32,27 @@ public class WatchedVideoService {
 
         WatchedVideo wv = watchedVideoRepository.findByUserIdAndVideoId(userId, videoId)
                 .orElseGet(() -> {
-                    WatchedVideo newWv = new WatchedVideo();
-                    newWv.setUser(user);
-                    newWv.setVideo(video);
+                    WatchedVideo newWv = dtoMapper.toWatchedVideoEntity(user, video);
                     return newWv;
                 });
 
         wv.setWatched(true);
-        return watchedVideoRepository.save(wv);
+        WatchedVideo saved = watchedVideoRepository.save(wv);
+        return dtoMapper.toWatchedVideoDto(saved);
     }
 
-    public void markSkipped(Long userId, Long videoId) {
+    public WatchedVideoDto markSkipped(Long userId, Long videoId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
         Video video = videoRepository.findById(videoId)
                 .orElseThrow(() -> new IllegalArgumentException("Video not found"));
 
         WatchedVideo wv = watchedVideoRepository.findByUserIdAndVideoId(userId, videoId)
-                .orElseGet(() -> {
-                    WatchedVideo newWv = new WatchedVideo();
-                    newWv.setUser(user);
-                    newWv.setVideo(video);
-                    return newWv;
-                });
+                .orElseGet(() -> dtoMapper.toWatchedVideoEntity(user, video));
+
         wv.setWatched(false);
-        watchedVideoRepository.save(wv);
+        WatchedVideo saved = watchedVideoRepository.save(wv);
+        return dtoMapper.toWatchedVideoDto(saved);
     }
 
     @Transactional(readOnly = true)
@@ -63,13 +63,30 @@ public class WatchedVideoService {
     }
 
     @Transactional(readOnly = true)
-    public List<WatchedVideo> getByUserId(Long userId) {
-        return watchedVideoRepository.findByUserId(userId);
+    public List<WatchedVideoDto> getByUserId(Long userId) {
+        return watchedVideoRepository.findByUserId(userId).stream()
+                .map(dtoMapper::toWatchedVideoDto)
+                .collect(Collectors.toList());
     }
 
+    @Transactional
     public void deleteWatched(Long userId, Long videoId) {
         watchedVideoRepository.deleteByUserIdAndVideoId(userId, videoId);
     }
 
+    @Transactional(readOnly = true)
+    public WatchedVideoDto getWatched(Long id) {
+        WatchedVideo wv = watchedVideoRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("WatchedVideo not found: " + id));
+        return dtoMapper.toWatchedVideoDto(wv);
+    }
+
+    public WatchedVideoDto toggleWatched(Long id) {
+        WatchedVideo wv = watchedVideoRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("WatchedVideo not found: " + id));
+        wv.setWatched(!wv.isWatched());
+        WatchedVideo saved = watchedVideoRepository.save(wv);
+        return dtoMapper.toWatchedVideoDto(saved);
+    }
 }
 

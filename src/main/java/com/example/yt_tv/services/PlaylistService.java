@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -30,7 +31,7 @@ public class PlaylistService {
     public PlaylistDto getPlaylist(Long id) {
         return playlistRepository.findById(id)
                 .map(dtoMapper::toPlaylistDto)
-                .orElseThrow(() -> new IllegalArgumentException("Playlist not found"));
+                .orElseThrow(() -> new IllegalArgumentException("Playlist not found with id: " + id));
     }
 
     @Transactional(readOnly = true)
@@ -43,7 +44,7 @@ public class PlaylistService {
     @Transactional
     public PlaylistDto updatePlaylist(Long id, PlaylistUpdateDto playlistUpdateDto) {
         Playlist playlist = playlistRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Playlist not found"));
+                .orElseThrow(() -> new IllegalArgumentException("Playlist not found with id: " + id));
 
         dtoMapper.updatePlaylistEntity(playlist, playlistUpdateDto);
         Playlist updated = playlistRepository.save(playlist);
@@ -57,8 +58,24 @@ public class PlaylistService {
 
     @Transactional
     public PlaylistDto addPlaylistChannel(Long playlistId, PlaylistChannel playlistChannel) {
+        if (playlistId == null) {
+            throw new IllegalArgumentException("Playlist id cannot be null");
+        }
+
+        if (playlistChannel == null || playlistChannel.getChannel() == null) {
+            throw new IllegalArgumentException("Channel cannot be null");
+        }
+
         Playlist playlist = playlistRepository.findById(playlistId)
-                .orElseThrow(() -> new IllegalArgumentException("Playlist not found"));
+                .orElseThrow(() -> new IllegalArgumentException("Playlist not found with id: " + playlistId));
+
+        Long newChannelId = playlistChannel.getChannel().getId();
+        boolean alreadyPresent = playlist.getPlaylistChannels().stream()
+                .anyMatch(pc -> pc.getChannel() != null && Objects.equals(pc.getChannel().getId(), newChannelId));
+
+        if (alreadyPresent) {
+            throw new IllegalArgumentException("Channel already present in playlist");
+        }
 
         playlist.addPlaylistChannel(playlistChannel);
         Playlist saved = playlistRepository.save(playlist);
@@ -67,6 +84,14 @@ public class PlaylistService {
 
     @Transactional
     public PlaylistDto removeChannelById(Long playlistId, Long channelId) {
+        if (playlistId == null) {
+            throw new IllegalArgumentException("Playlist id cannot be null");
+        }
+
+        if (channelId == null) {
+            throw new IllegalArgumentException("Channel id cannot be null");
+        }
+
         Playlist playlist = playlistRepository.findById(playlistId)
                 .orElseThrow(() -> new IllegalArgumentException("Playlist not found"));
 
