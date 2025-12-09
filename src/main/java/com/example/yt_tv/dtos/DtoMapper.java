@@ -67,8 +67,17 @@ public class DtoMapper {
             return null;
         PlaylistChannelDto dto = new PlaylistChannelDto();
         dto.setId(playlistChannel.getId());
-        dto.setPlaylistId(playlistChannel.getPlaylist() != null ? playlistChannel.getPlaylist().getId() : null);
-        dto.setChannelId(playlistChannel.getChannel() != null ? playlistChannel.getChannel().getId() : null);
+
+        if (playlistChannel.getPlaylist() != null) {
+            dto.setPlaylistId(playlistChannel.getPlaylist().getId());
+        }
+
+        if (playlistChannel.getChannel() != null) {
+            dto.setChannelId(playlistChannel.getChannel().getId());
+            dto.setChannelName(playlistChannel.getChannel().getName());
+            dto.setThumbnailUrl(playlistChannel.getChannel().getThumbnailUrl());
+        }
+
         return dto;
     }
 

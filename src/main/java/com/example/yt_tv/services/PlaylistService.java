@@ -41,6 +41,13 @@ public class PlaylistService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public List<PlaylistDto> getPlaylistsByUserId(Long userId) {
+        return playlistRepository.findByUserId(userId).stream()
+                .map(dtoMapper::toPlaylistDto)
+                .toList();
+    }
+
     @Transactional
     public PlaylistDto updatePlaylist(Long id, PlaylistUpdateDto playlistUpdateDto) {
         Playlist playlist = playlistRepository.findById(id)

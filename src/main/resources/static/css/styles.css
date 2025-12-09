@@ -1,0 +1,128 @@
+/* --- GLOBAL LAYOUT --- */
+body {
+    background-color: #121212;
+    color: white;
+    min-height: 100vh;
+    margin: 0;
+}
+
+/* --- CARDS & CONTAINERS --- */
+.card {
+    background-color: #1e1e1e;
+    border: none;
+    border-radius: 1rem; /* Standard rounded corners */
+}
+
+/* This targets the internal padding of cards */
+.card .p-3, .card .p-4 {
+    background-color: #1e1e1e;
+}
+
+.modal-content {
+    background-color: #1e1e1e;
+    color: white;
+    border: 1px solid #333;
+}
+
+/* --- FORMS & BUTTONS --- */
+.form-control {
+    background-color: #2d2d2d;
+    color: #ffffff !important;
+    border: none;
+    padding: 1.5vh 1vw; /* Responsive padding */
+}
+
+.form-control::placeholder {
+    color: #cccccc !important;
+    opacity: 1;
+}
+
+.form-control:focus {
+    background-color: #333;
+    color: white;
+    box-shadow: 0 0 0 0.2rem rgba(204, 0, 0, 0.25);
+}
+
+.btn-primary {
+    background-color: #cc0000;
+    border: none;
+    padding: 1vh 2vw;
+}
+
+.btn-primary:hover {
+    background-color: #990000;
+}
+
+/* --- NAVBAR --- */
+.navbar {
+    background-color: #1e1e1e;
+    border-bottom: 1px solid #333;
+    padding: 1.5vh 3vw; /* Responsive padding top/bot and left/right */
+}
+
+/* --- DASHBOARD PLAYLIST CARDS --- */
+.playlist-card {
+    background-color: #1e1e1e;
+    transition: transform 0.2s;
+    cursor: pointer;
+    text-decoration: none;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    border-radius: 1vw;
+    height: 100%;
+    min-height: 15vh; /* Minimum height relative to screen */
+}
+
+.playlist-card:hover {
+    transform: scale(1.05);
+    background-color: #252525;
+    color: #cc0000;
+}
+
+.playlist-card h4 {
+    font-size: clamp(1rem, 2vw, 1.5rem); /* Responsive Text Size */
+    margin-bottom: 0.5vh;
+}
+
+/* --- LISTS & TABLES --- */
+.list-group-item {
+    background-color: #1e1e1e;
+    color: white;
+    border-color: #333;
+    padding: 2vh 2vw;
+}
+
+.list-group-item:hover {
+    background-color: #252525;
+}
+
+.table {
+    color: white;
+    vertical-align: middle;
+}
+
+/* --- RESPONSIVE IMAGES --- */
+
+/* 1. Channel Icons in Lists and Tables */
+.table img, .list-group-item img {
+    /* This is the magic part: */
+    width: clamp(40px, 5vw, 60px);
+    height: clamp(40px, 5vw, 60px);
+
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0; /* Prevents image from squishing on small screens */
+}
+
+.list-group-item img {
+    margin-right: 2vw; /* Responsive spacing between image and text */
+}
+
+/* 2. Global Safety for other images */
+img {
+    max-width: 100%;
+    height: auto;
+}

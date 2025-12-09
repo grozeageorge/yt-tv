@@ -13,6 +13,8 @@ import java.util.Optional;
 public interface VideoRepository extends JpaRepository<Video, Long> {
     List<Video> findByChannelId(Long channelId);
 
+    Optional<Video> findByYtVideoId(String ytVideoId);
+
     @Query(value = "SELECT TOP 1 * FROM videos WHERE channel_id = :channelId ORDER BY NEWID()", nativeQuery = true)
     Optional<Video> findRandomByChannelId(@Param("channelId") Long channelId);
 }

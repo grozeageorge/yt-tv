@@ -11,4 +11,7 @@ public class PlaylistChannelDto {
     private Long id;
     private Long playlistId;
     private Long channelId;
+
+    private String channelName;
+    private String thumbnailUrl;
 }
