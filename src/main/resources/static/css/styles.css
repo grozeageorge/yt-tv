@@ -126,3 +126,96 @@ img {
     max-width: 100%;
     height: auto;
 }
+
+/* --- TV PLAYER STYLES --- */
+
+body.tv-mode {
+    margin: 0;
+    padding: 0;
+    background-color: black;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+    display: flex;
+    flex-direction: column; /* Stacks controls on top, video below */
+}
+
+/* Controls Bar (Now at the top) */
+#controls {
+    height: 70px; /* Taller for better touch/click targets */
+    background: #121212; /* Matches app theme */
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 30px;
+    color: white;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    border-bottom: 1px solid #333; /* Line below controls */
+    flex-shrink: 0;
+    z-index: 100; /* Ensure it stays on top */
+}
+
+#now-playing {
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* Video Container */
+#player-container {
+    flex-grow: 1;
+    position: relative;
+    width: 100%;
+    background-color: #000;
+}
+
+#player, #player-container iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100% !important;
+    height: 100% !important;
+    border: none;
+}
+
+/* Better Buttons */
+.btn-player {
+    padding: 10px 20px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 14px;
+    transition: all 0.2s ease-in-out;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+}
+
+/* Gray Button (Back) */
+.btn-secondary {
+    background-color: #2d2d2d;
+    color: #ccc;
+    border: 1px solid #444;
+}
+
+.btn-secondary:hover {
+    background-color: #3d3d3d;
+    color: white;
+    transform: translateY(-2px); /* Slight lift effect */
+}
+
+/* Red Button (Next) */
+.btn-red {
+    background-color: #cc0000;
+    color: white;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+}
+
+.btn-red:hover {
+    background-color: #ff0000;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 8px rgba(0,0,0,0.5);
+}

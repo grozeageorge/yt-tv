@@ -17,4 +17,6 @@ public interface VideoRepository extends JpaRepository<Video, Long> {
 
     @Query(value = "SELECT TOP 1 * FROM videos WHERE channel_id = :channelId ORDER BY NEWID()", nativeQuery = true)
     Optional<Video> findRandomByChannelId(@Param("channelId") Long channelId);
+
+    List<Video> findByChannelIdIn(List<Long> channelIds);
 }

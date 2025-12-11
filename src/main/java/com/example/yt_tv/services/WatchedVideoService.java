@@ -88,5 +88,21 @@ public class WatchedVideoService {
         WatchedVideo saved = watchedVideoRepository.save(wv);
         return dtoMapper.toWatchedVideoDto(saved);
     }
+
+    @Transactional
+    public void markWatchedByYtId(Long userId, String ytVideoId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        Video video = videoRepository.findByYtVideoId(ytVideoId)
+                .orElseThrow(() -> new IllegalArgumentException("Video not found"));
+
+        WatchedVideo wv = watchedVideoRepository.findByUserIdAndVideoId(userId, video.getId())
+                .orElseGet(() -> dtoMapper.toWatchedVideoEntity(user, video));
+
+        wv.setWatched(true);
+        watchedVideoRepository.save(wv);
+        System.out.println("Marked video " + ytVideoId + " as watched by user " + user.getUsername());
+    }
 }
 

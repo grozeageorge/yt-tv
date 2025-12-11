@@ -29,4 +29,10 @@ public class Channel {
 
     @Column(nullable = false)
     private Instant lastSync;
+
+    @Column
+    private String nextPageToken;
+
+    @Column
+    private String uploadsPlaylistId;
 }

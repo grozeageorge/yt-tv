@@ -11,6 +11,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.security.Principal;
 import java.util.Optional;
 
 @Controller
@@ -23,27 +24,26 @@ public class WebController {
     private final ChannelService channelService;
     private final PlaylistChannelService playlistChannelService;
 
+    // --- HELPER ---
+
+    private User getLoggedInUser(Principal principal) {
+        if (principal == null)
+            return null;
+
+        return userRepository.findByEmail(principal.getName())
+                .orElseThrow(() -> new IllegalArgumentException("User not found!"));
+    }
+
     // --- LOGIN & AUTH ---
 
     @GetMapping("/")
-    public String index() {
-        return "redirect:/login";
+    public String index()
+    {
+        return "redirect:/dashboard";
     }
 
     @GetMapping("/login")
-    public String loginPage(Model model) {
-        model.addAttribute("loginRequest", new UserCreateDto());
-        return "login";
-    }
-
-    @PostMapping("/login")
-    public String handleLogin(@ModelAttribute("loginRequest") UserCreateDto loginRequest, HttpSession session, Model model) {
-        Optional<User> userOpt = userRepository.findByEmail(loginRequest.getEmail());
-        if (userOpt.isPresent() && userOpt.get().getPassword().equals(loginRequest.getPassword())) {
-            session.setAttribute("user", userOpt.get());
-            return "redirect:/dashboard";
-        }
-        model.addAttribute("error", "Invalid email or password");
+    public String loginPage() {
         return "login";
     }
 
@@ -68,9 +68,9 @@ public class WebController {
     // --- DASHBOARD ---
 
     @GetMapping("/dashboard")
-    public String dashboard(HttpSession session, Model model) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) return "redirect:/login";
+    public String dashboard(Model model, Principal principal) {
+
+        User user = getLoggedInUser(principal);
 
         model.addAttribute("playlists", playlistService.getPlaylistsByUserId(user.getId()));
         model.addAttribute("newPlaylist", new PlaylistCreateDto());
@@ -79,21 +79,17 @@ public class WebController {
     }
 
     @PostMapping("/playlists/create")
-    public String createPlaylist(@ModelAttribute PlaylistCreateDto createDto, HttpSession session) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) return "redirect:/login";
-
+    public String createPlaylist(@ModelAttribute PlaylistCreateDto createDto, Principal principal) {
+        User user = getLoggedInUser(principal);
         playlistService.createPlaylist(user, createDto);
         return "redirect:/dashboard";
     }
 
-    // --- PLAYLIST VIEW (The Missing Piece?) ---
+    // --- PLAYLIST VIEW ---
 
     @GetMapping("/playlist/{id}")
-    public String viewPlaylist(@PathVariable Long id, HttpSession session, Model model) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) return "redirect:/login";
-
+    public String viewPlaylist(@PathVariable Long id, Model model, Principal principal) {
+        getLoggedInUser(principal);
         // Get the playlist details
         PlaylistDto playlist = playlistService.getPlaylist(id);
         model.addAttribute("playlist", playlist);
@@ -154,6 +150,23 @@ public class WebController {
     public String deleteChannelGlobal(@RequestParam Long channelId, @RequestParam Long returnPlaylistId) {
         channelService.delete(channelId);
         return "redirect:/playlist/" + returnPlaylistId;
+    }
+
+    // --- PLAYER ---
+    @GetMapping("/play/playlist/{id}")
+    public String playTv(@PathVariable Long id, Model model, Principal principal) {
+        User user = getLoggedInUser(principal);
+
+        // Get the shuffled queue of Video IDs
+        java.util.List<String> videoQueue = playlistService.getVideoQueue(id, user.getId());
+
+        if (videoQueue.isEmpty()) {
+            return "redirect:/playlist/" + id + "?error=No videos found in these channels. Try syncing them!";
+        }
+
+        model.addAttribute("videoQueue", videoQueue);
+        model.addAttribute("playlistId", id);
+        return "tv_player";
     }
 
     // --- MANAGE CHANNELS (Legacy Page) ---

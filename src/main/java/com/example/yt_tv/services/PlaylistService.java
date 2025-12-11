@@ -4,22 +4,28 @@ import com.example.yt_tv.dtos.DtoMapper;
 import com.example.yt_tv.dtos.PlaylistCreateDto;
 import com.example.yt_tv.dtos.PlaylistDto;
 import com.example.yt_tv.dtos.PlaylistUpdateDto;
-import com.example.yt_tv.entities.Playlist;
-import com.example.yt_tv.entities.PlaylistChannel;
-import com.example.yt_tv.entities.User;
+import com.example.yt_tv.entities.*;
 import com.example.yt_tv.repositories.PlaylistRepository;
+import com.example.yt_tv.repositories.VideoRepository;
+import com.example.yt_tv.repositories.WatchedVideoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class PlaylistService {
     private final PlaylistRepository playlistRepository;
+    private final VideoRepository videoRepository;
+    private final WatchedVideoRepository watchedVideoRepository;
     private final DtoMapper dtoMapper;
+    private final ChannelService channelService;
+
 
     @Transactional
     public PlaylistDto createPlaylist(User user, PlaylistCreateDto playlistCreateDto) {
@@ -109,5 +115,74 @@ public class PlaylistService {
 
         Playlist saved = playlistRepository.save(playlist);
         return dtoMapper.toPlaylistDto(saved);
+    }
+
+    @Transactional(readOnly = true)
+    public List<String> getVideoQueue(Long playlistId) {
+        Playlist playlist = playlistRepository.findById(playlistId)
+                .orElseThrow(() -> new IllegalArgumentException("Playlist not found"));
+
+        if (playlist.getPlaylistChannels().isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<Long> channelIds = playlist.getPlaylistChannels().stream()
+                .map(pc -> pc.getChannel().getId())
+                .toList();
+
+        // If this line is red, you need to add the method to VideoRepository (see Step 3)
+        List<Video> allVideos = videoRepository.findByChannelIdIn(channelIds);
+
+        Collections.shuffle(allVideos);
+
+        return allVideos.stream()
+                .map(Video::getYtVideoId)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public List<String> getVideoQueue(Long playlistId, Long userId) {
+        Playlist playlist = playlistRepository.findById(playlistId)
+                .orElseThrow(() -> new IllegalArgumentException("Playlist not found"));
+
+        if (playlist.getPlaylistChannels().isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<Long> channelIds = playlist.getPlaylistChannels().stream()
+                .map(pc -> pc.getChannel().getId())
+                .toList();
+
+        List<Video> dbVideos = videoRepository.findByChannelIdIn(channelIds);
+
+        List<Long> watchedIds = watchedVideoRepository.findByUserId(userId).stream()
+                .map(wv -> wv.getVideo().getId())
+                .toList();
+
+        List<String> queue = dbVideos.stream()
+                .filter(v -> !watchedIds.contains(v.getId()))
+                .map(Video::getYtVideoId)
+                .collect(Collectors.toList());
+
+        if (queue.isEmpty()) {
+            System.out.println("Queue is empty! Attempting to fetch next batch from Youtube...");
+            boolean newVideosFound = false;
+
+            for (PlaylistChannel pc : playlist.getPlaylistChannels()) {
+                Channel c = pc.getChannel();
+
+                if (c.getNextPageToken() != null || dbVideos.isEmpty()) {
+                    channelService.fetchNextBatch(c.getId());
+                    newVideosFound = true;
+                }
+            }
+
+            if (newVideosFound) {
+                return getVideoQueue(playlistId, userId);
+            }
+        }
+
+        Collections.shuffle(queue);
+        return queue;
     }
 }

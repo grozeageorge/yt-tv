@@ -1,6 +1,7 @@
 package com.example.yt_tv.services;
 
 import com.example.yt_tv.dtos.ChannelCreateDto;
+import com.example.yt_tv.dtos.YoutubeApiResponse;
 import com.example.yt_tv.dtos.YoutubeVideoInfo;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -75,47 +76,105 @@ public class YoutubeApiClient {
     }
 
     // --- 2. FETCH VIDEOS (Hybrid Strategy) ---
-    public List<YoutubeVideoInfo> fetchLatestVideos(String ytChannelId) {
-        // Strategy A: Try to get the "Uploads" playlist (Best for Creators)
-        List<YoutubeVideoInfo> videos = fetchFromUploadsPlaylist(ytChannelId);
-
-        // Strategy B: If that failed (returns empty), try Search (Best for Topic Channels)
-        if (videos.isEmpty()) {
-            System.out.println("Playlist method failed or empty. Falling back to Search method for: " + ytChannelId);
-            videos = fetchFromSearchFallback(ytChannelId);
+    public YoutubeApiResponse fetchVideos(String ytChannelId, String uploadsPlaylistId, String pageToken) {
+        String playlistId = uploadsPlaylistId;
+        if (playlistId == null) {
+            playlistId = getUploadsPlaylistId(ytChannelId);
         }
 
-        return videos;
+        if (playlistId != null) {
+            return fetchFromPlaylist(playlistId, pageToken);
+        }
+
+        return fetchFromSearch(ytChannelId, pageToken);
     }
 
+
+
     // STRATEGY A: Get videos via "Uploads" playlist
-    private List<YoutubeVideoInfo> fetchFromUploadsPlaylist(String channelId) {
-        // 1. Get the Playlist ID using a helper method (This keeps the variable final)
-        String uploadsPlaylistId = getUploadsPlaylistId(channelId);
-
-        if (uploadsPlaylistId == null) {
-            return new ArrayList<>();
-        }
-
-        // 2. Now 'uploadsPlaylistId' is effectively final, so we can use it in the lambda
+    private YoutubeApiResponse fetchFromPlaylist(String playlistId, String pageToken) {
         try {
-            String playlistResponse = restClient.get()
-                    .uri(uriBuilder -> uriBuilder
-                            .scheme("https")
-                            .host("www.googleapis.com")
-                            .path("/youtube/v3/playlistItems")
-                            .queryParam("key", apiKey.trim())
-                            .queryParam("playlistId", uploadsPlaylistId)
-                            .queryParam("part", "snippet")
-                            .queryParam("maxResults", "20")
-                            .build())
-                    .retrieve()
-                    .body(String.class);
+            var uriSpec = restClient.get().uri(uriBuilder -> {
+                uriBuilder.scheme("https").host("www.googleapis.com")
+                        .path("/youtube/v3/playlistItems")
+                        .queryParam("key", apiKey)
+                        .queryParam("playlistId", playlistId)
+                        .queryParam("part", "snippet")
+                        .queryParam("maxResults", "20");
 
-            return parseVideoList(playlistResponse, true); // true = parsing playlistItems
+                if (pageToken != null)
+                    uriBuilder.queryParam("pageToken", pageToken);
+
+                return uriBuilder.build();
+            });
+
+            String response = uriSpec.retrieve().body(String.class);
+            return parseResponse(response, true, playlistId);
         } catch (Exception e) {
-            return new ArrayList<>();
+            return new YoutubeApiResponse(new ArrayList<>(), null, playlistId);
         }
+    }
+
+    // STRATEGY SEARCH
+
+    private YoutubeApiResponse fetchFromSearch(String channelId, String pageToken) {
+        try{
+            var uniSpec = restClient.get().uri(uriBuilder -> {
+                uriBuilder.scheme("https").host("www.googleapis.com")
+                        .path("/youtube/v3/search")
+                        .queryParam("key", apiKey)
+                        .queryParam("channelId", channelId)
+                        .queryParam("part", "snippet,id")
+                        .queryParam("order", "date")
+                        .queryParam("maxResults", "20")
+                        .queryParam("type", "video;");
+                if (pageToken != null)
+                    uriBuilder.queryParam("pageToken", pageToken);
+
+                return uriBuilder.build();
+            });
+
+            String response = uniSpec.retrieve().body(String.class);
+            return parseResponse(response, false, null);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new YoutubeApiResponse(new ArrayList<>(), null, null);
+        }
+    }
+
+    // --- PARSER ---
+
+    private YoutubeApiResponse parseResponse(String json, boolean isPlaylist, String playlistId) {
+        List<YoutubeVideoInfo> videos = new ArrayList<>();
+        String nextToken = null;
+
+        try{
+            JsonNode root = objectMapper.readTree(json);
+            if (root.has("nextPageToken")) {
+                nextToken = root.get("nextPageToken").asText();
+            }
+
+            JsonNode items = root.path("items");
+            if (items.isArray()) {
+                for (JsonNode item : items) {
+                    JsonNode snippet = item.path("snippet");
+                    String videoId = isPlaylist
+                            ? snippet.path("resourceId").path("videoId").asText()
+                            : item.path("id").path("videoId").asText();
+
+                    String title = snippet.path("title").asText();
+                    String thumb = snippet.path("thumbnails").path("medium").path("url").asText();
+
+                    if (videoId != null && !videoId.isEmpty()) {
+                        videos.add(new YoutubeVideoInfo(videoId, title, thumb));
+                    }
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return new YoutubeApiResponse(videos, nextToken, playlistId);
     }
 
     // Helper to get the ID (keeps the code clean)
@@ -149,30 +208,7 @@ public class YoutubeApiClient {
         return null;
     }
 
-    // STRATEGY B: Get videos via Search (Fallback)
-    private List<YoutubeVideoInfo> fetchFromSearchFallback(String channelId) {
-        try {
-            String response = restClient.get()
-                    .uri(uriBuilder -> uriBuilder
-                            .scheme("https")
-                            .host("www.googleapis.com")
-                            .path("/youtube/v3/search")
-                            .queryParam("key", apiKey.trim())
-                            .queryParam("channelId", channelId.trim())
-                            .queryParam("part", "snippet,id")
-                            .queryParam("order", "date")
-                            .queryParam("maxResults", "20")
-                            .queryParam("type", "video")
-                            .build())
-                    .retrieve()
-                    .body(String.class);
 
-            return parseVideoList(response, false); // false = parsing search results
-        } catch (Exception e) {
-            e.printStackTrace();
-            return new ArrayList<>();
-        }
-    }
 
     // Universal Parser
     private List<YoutubeVideoInfo> parseVideoList(String jsonResponse, boolean isPlaylist) {

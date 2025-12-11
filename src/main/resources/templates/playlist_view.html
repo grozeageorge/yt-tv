@@ -16,7 +16,9 @@
             <span class="text-danger fw-bold">Playlist:</span>
             <span th:text="${playlist.name}">Name</span>
         </h1>
-        <button class="btn btn-lg btn-danger px-5">PLAY TV &#9658;</button>
+        <a th:href="@{/play/playlist/{id}(id=${playlist.id})}" class="btn btn-lg btn-danger px-5">
+            PLAY TV &#9658;
+        </a>
     </div>
 
     <!-- Alert Messages -->

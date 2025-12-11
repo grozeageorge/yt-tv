@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>YT TV - Now Playing</title>
+    <link th:href="@{/css/styles.css}" rel="stylesheet">
+</head>
+<body class="tv-mode">
+
+<!-- Top Controls -->
+<div id="controls">
+    <div>
+        <a th:href="@{/playlist/{id}(id=${playlistId})}" class="btn-player btn-secondary">&larr; Back to Playlist</a>
+    </div>
+    <div id="now-playing">Loading TV...</div>
+    <div>
+        <button onclick="nextVideo()" class="btn-player btn-red">Next Video &rarr;</button>
+    </div>
+</div>
+
+<!-- The YouTube Player Embed (Now Below) -->
+<div id="player-container">
+    <div id="player"></div>
+</div>
+
+<script th:inline="javascript">
+    const videoQueue = /*[[${videoQueue}]]*/ [];
+</script>
+<script th:src="@{/js/tv-player.js}"></script>
+
+</body>
+</html>

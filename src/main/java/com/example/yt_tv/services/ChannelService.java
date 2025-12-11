@@ -1,9 +1,6 @@
 package com.example.yt_tv.services;
 
-import com.example.yt_tv.dtos.ChannelCreateDto;
-import com.example.yt_tv.dtos.ChannelDto;
-import com.example.yt_tv.dtos.DtoMapper;
-import com.example.yt_tv.dtos.YoutubeVideoInfo;
+import com.example.yt_tv.dtos.*;
 import com.example.yt_tv.entities.Channel;
 import com.example.yt_tv.entities.PlaylistChannel;
 import com.example.yt_tv.entities.Video;
@@ -84,10 +81,19 @@ public class ChannelService {
         Channel channel = channelRepository.findById(channelId)
                 .orElseThrow(() -> new IllegalArgumentException("Channel not found with id: " + channelId));
 
-        List<YoutubeVideoInfo> ytVideos = youtubeApiClient.fetchLatestVideos(channel.getYtChannelId());
+        YoutubeApiResponse response = youtubeApiClient.fetchVideos(
+                channel.getYtChannelId(),
+                channel.getUploadsPlaylistId(),
+                null
+        );
+
+        channel.setNextPageToken(response.nextPageToken());
+        if (channel.getUploadsPlaylistId() == null) {
+            channel.setUploadsPlaylistId(response.uploadsPlaylistId());
+        }
 
         int addedCount = 0;
-        for (YoutubeVideoInfo info : ytVideos) {
+        for (YoutubeVideoInfo info : response.videos()) {
             Optional<Video> existing = videoRepository.findByYtVideoId(info.videoId());
 
             if (existing.isEmpty()) {
@@ -130,4 +136,36 @@ public class ChannelService {
         return channelDto;
     }
 
+    @Transactional
+    public void fetchNextBatch(Long channelId) {
+        Channel channel = channelRepository.findById(channelId)
+                .orElseThrow(() -> new IllegalArgumentException("Channel not found with id: " + channelId));
+
+        YoutubeApiResponse response = youtubeApiClient.fetchVideos(
+                channel.getYtChannelId(),
+                channel.getUploadsPlaylistId(),
+                channel.getNextPageToken()
+        );
+
+        for (YoutubeVideoInfo videoInfo : response.videos()) {
+            if (videoRepository.findByYtVideoId(videoInfo.videoId()).isEmpty()) {
+                Video video = new Video();
+                video.setChannel(channel);
+                video.setYtVideoId(videoInfo.videoId());
+                video.setTitle(videoInfo.title());
+                video.setThumbnailUrl(videoInfo.thumbnail());
+                videoRepository.save(video);
+            }
+        }
+
+        channel.setNextPageToken(response.nextPageToken());
+        if (channel.getUploadsPlaylistId() == null && response.uploadsPlaylistId() != null) {
+            channel.setUploadsPlaylistId(response.uploadsPlaylistId());
+        }
+
+        channel.setLastSync(Instant.now());
+
+        channelRepository.save(channel);
+        System.out.println("Fetched next batch for " + channel.getName() + ". Next Token: " + response.nextPageToken());
+    }
 }
