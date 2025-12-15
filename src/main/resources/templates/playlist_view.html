@@ -16,9 +16,20 @@
             <span class="text-danger fw-bold">Playlist:</span>
             <span th:text="${playlist.name}">Name</span>
         </h1>
-        <a th:href="@{/play/playlist/{id}(id=${playlist.id})}" class="btn btn-lg btn-danger px-5">
-            PLAY TV &#9658;
-        </a>
+
+        <div>
+            <!-- DELETE BUTTON (New) -->
+            <a th:href="@{/playlists/delete/{id}(id=${playlist.id})}"
+               class="btn btn-outline-secondary me-3"
+               onclick="return confirm('Are you sure you want to delete this entire playlist? This cannot be undone.');">
+                Delete Playlist
+            </a>
+
+            <a th:href="@{/play/playlist/{id}(id=${playlist.id})}" class="btn btn-lg btn-danger px-5">
+                PLAY TV &#9658;
+            </a>
+
+        </div>
     </div>
 
     <!-- Alert Messages -->

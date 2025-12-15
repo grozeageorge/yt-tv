@@ -97,6 +97,13 @@ public class WebController {
         return "playlist_view";
     }
 
+    // --- DELETE PLAYLIST ---
+    @GetMapping("/playlists/delete/{id}")
+    public String deletePlaylist(@PathVariable Long id, Principal principal) {
+        playlistService.deletePlaylist(id);
+        return "redirect:/dashboard";
+    }
+
     // --- ADD CHANNEL (SEARCH) ---
 
     @PostMapping("/playlist/{playlistId}/add-channel-query")
