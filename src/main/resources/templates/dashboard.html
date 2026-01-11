@@ -12,6 +12,7 @@
     <a class = "navbar-brand fw-bold" href="#">YT TV <span class = "badge bg-danger">LIVE</span></a>
     <div class = "d-flex align-items-center">
         <span class = "me-3 text-secondary">Hello, <span th:text="${username}">User</span></span>
+        <a th:href="@{/chat}" class="btn btn-sm btn-outline-warning me-2">🤖 AI Chat</a>
         <a th:href="@{/logout}" class = "btn btn-sm btn-outline-danger">Logout</a>
     </div>
 </nav>

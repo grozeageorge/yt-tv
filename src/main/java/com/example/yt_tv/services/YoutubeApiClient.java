@@ -8,9 +8,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.util.UriBuilder;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class YoutubeApiClient {
@@ -77,19 +80,115 @@ public class YoutubeApiClient {
 
     // --- 2. FETCH VIDEOS (Hybrid Strategy) ---
     public YoutubeApiResponse fetchVideos(String ytChannelId, String uploadsPlaylistId, String pageToken) {
-        String playlistId = uploadsPlaylistId;
-        if (playlistId == null) {
-            playlistId = getUploadsPlaylistId(ytChannelId);
+        List<YoutubeVideoInfo> validVideos = new ArrayList<>();
+        String currentPageToken = pageToken;
+        String finalPlaylistId = uploadsPlaylistId;
+        int safetyLoopLimit = 0;
+
+        while (validVideos.size() < 20 && safetyLoopLimit < 5) {
+            YoutubeApiResponse rawResponse;
+            String playlistIdToCheck = finalPlaylistId != null ? finalPlaylistId : getUploadsPlaylistId(ytChannelId);
+
+            if (playlistIdToCheck != null) {
+                finalPlaylistId = playlistIdToCheck;
+                rawResponse = fetchFromPlaylist(finalPlaylistId, currentPageToken);
+            } else {
+                rawResponse = fetchFromSearch(ytChannelId, currentPageToken);
+            }
+
+            if (rawResponse.videos().isEmpty()) {
+                break;
+            }
+
+            List<YoutubeVideoInfo> longVideos = filterOutShorts(rawResponse.videos());
+            validVideos.addAll(longVideos);
+            currentPageToken = rawResponse.nextPageToken();
+
+            if (currentPageToken == null || currentPageToken.isEmpty()) {
+                break;
+            }
+
+            safetyLoopLimit++;
         }
 
-        if (playlistId != null) {
-            return fetchFromPlaylist(playlistId, pageToken);
+        if (validVideos.size() > 20) {
+            validVideos = validVideos.subList(0, 20);
         }
 
-        return fetchFromSearch(ytChannelId, pageToken);
+        return new YoutubeApiResponse(validVideos, currentPageToken, finalPlaylistId);
     }
 
+    public List<String> getChannelTopics(String channelId) {
+        try {
+            String response = restClient.get()
+                    .uri(uriBuilder -> uriBuilder
+                            .scheme("https").host("www.googleapis.com")
+                            .path("/youtube/v3/channels")
+                            .queryParam("key", apiKey)
+                            .queryParam("id", channelId)
+                            .queryParam("part", "topicDetails")
+                            .build())
+                    .retrieve()
+                    .body(String.class);
 
+            JsonNode root = objectMapper.readTree(response);
+            List<String> topics = new ArrayList<>();
+
+            if (root.path("items").isArray() && root.path("items").size() > 0) {
+                JsonNode categories = root.path("items").get(0).path("topicDetails").path("topicCategories");
+                if (categories.isArray()) {
+                    for (JsonNode category : categories) {
+                        String url = category.asText();
+                        String name = url.substring(url.lastIndexOf("/") + 1).replace("_", " ");
+                        topics.add(name);
+                    }
+                }
+            }
+            return topics;
+        } catch (Exception e) {
+            return new ArrayList<>();
+        }
+    }
+
+    private List<YoutubeVideoInfo> filterOutShorts(List<YoutubeVideoInfo> videos) {
+        if (videos.isEmpty()) return videos;
+
+        try {
+            String videoIds = videos.stream()
+                    .map(YoutubeVideoInfo::videoId)
+                    .collect(Collectors.joining(","));
+
+            String response = restClient.get().uri(uriBuilder -> uriBuilder
+                    .scheme("https").host("www.googleapis.com")
+                    .path("/youtube/v3/videos")
+                    .queryParam("key", apiKey)
+                    .queryParam("id", videoIds)
+                    .queryParam("part", "contentDetails")
+                    .build()).retrieve().body(String.class);
+
+            JsonNode root = objectMapper.readTree(response);
+            List<String> validIds = new ArrayList<>();
+
+            for (JsonNode item : root.path("items")) {
+                String durationStr = item.path("contentDetails").path("duration").asText();
+                try {
+                    Duration duration = Duration.parse(durationStr);
+                    if (duration.getSeconds() > 120) {
+                        validIds.add(item.path("id").asText());
+                    }
+                } catch (Exception ignored) {
+                    validIds.add(item.path("id").asText());
+                }
+            }
+
+            return videos.stream()
+                    .filter(v -> validIds.contains(v.videoId()))
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            System.err.println("Error filtering out shorts: " + e.getMessage());
+            return videos;
+        }
+    }
 
     // STRATEGY A: Get videos via "Uploads" playlist
     private YoutubeApiResponse fetchFromPlaylist(String playlistId, String pageToken) {

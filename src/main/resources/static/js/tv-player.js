@@ -48,8 +48,16 @@ function onPlayerStateChange(event) {
 }
 
 function onPlayerError(event) {
-    console.log("Error playing video index " + currentIndex + ". Skipping...");
-    nextVideo();
+    let reason = "Unknown error."
+    if (event.data === 100) reason = "Video removed.";
+    if (event.data === 101 || event.data == 150) reason = "Video is restricted.";
+
+    console.log(`Skipping video index ${currentIndex} because of error: ${reason}`);
+
+    const status = document.getElementById('now-playing');
+    if (status) status.innerText = `Skipping: ${reason}...`;
+
+    setTimeout(() => nextVideo(), 1000);
 }
 
 function nextVideo() {
@@ -57,15 +65,43 @@ function nextVideo() {
 
     currentIndex++;
     if (currentIndex >= videoQueue.length) {
-        console.log("Queue finished. Reloading to fetch next batch...");
-        document.getElementById('now-playing').innerText = "Fetching new videos from TV...";
-        window.location.reload();
+
+        if (currentPlaylistId !== null) {
+            console.log("Playlist ended. Fetching next batch...");
+            document.getElementById('now-playing').innerText = "Fetching new videos...";
+            window.location.reload();
+        }
+        else if (originalAiQuery !== null) {
+            console.log("AI Queue ended. Auto-fetching more for: " + originalAiQuery);
+            document.getElementById('now-playing').innerText = "AI is finding more videos...";
+            fetchNextAiBatch();
+        }
+        else {
+            document.getElementById('now-playing').innerText="End of Queue.";
+        }
+
         return;
     }
     // Load AND Play the next video
     // (This usually works perfectly automatically after the first click)
     player.loadVideoById(videoQueue[currentIndex]);
     updateTitle();
+}
+
+function fetchNextAiBatch() {
+    fetch('/api/ai/chat-full?message=' + encodeURIComponent(originalAiQuery), { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+            if (data.videoIds && data.videoIds.length > 0) {
+                // We found more! Reload the player with the new list.
+                document.getElementById('nextBatchIds').value = data.videoIds.join(',');
+                document.getElementById('nextBatchQuery').value = originalAiQuery;
+                document.getElementById('aiReloadForm').submit();
+            } else {
+                document.getElementById('now-playing').innerText = "No more videos found!";
+            }
+        })
+        .catch(err => console.error(err));
 }
 
 function updateTitle() {

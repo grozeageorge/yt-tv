@@ -12,4 +12,5 @@ public interface PlaylistChannelRepository extends JpaRepository<PlaylistChannel
     List<PlaylistChannel> findByPlaylistId(Long playlistId);
 
     List<PlaylistChannel> findByChannelId(Long channelId);
+    boolean existsByPlaylistIdAndChannelId(Long playlistId, Long channelId);
 }

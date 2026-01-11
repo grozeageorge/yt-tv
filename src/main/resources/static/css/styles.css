@@ -219,3 +219,44 @@ body.tv-mode {
     transform: translateY(-2px);
     box-shadow: 0 6px 8px rgba(0,0,0,0.5);
 }
+
+.chat-container {
+    max-width: 800px;
+    margin: 50px auto;
+}
+
+.chat-box {
+    height: 60vh;
+    overflow-y: auto;
+    background: #1e1e1e;
+    border: 1px solid #333;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.message {
+    margin-bottom: 15px;
+    padding: 10px 15px;
+    border-radius: 15px;
+    max-width: 80%;
+}
+
+.user-msg {
+    background: #cc0000;
+    color: white;
+    margin-left: auto;
+    border-bottom-right-radius: 2px;
+}
+
+.ai-msg {
+    background: #333;
+    color: #ddd;
+    margin-right: auto;
+    border-bottom-left-radius: 2px;
+}
+
+.video-preview {
+    font-size: 0.8em;
+    color: #aaa;
+    margin-top: 5px;
+}

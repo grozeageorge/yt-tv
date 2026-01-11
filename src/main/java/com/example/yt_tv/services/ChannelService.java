@@ -7,11 +7,14 @@ import com.example.yt_tv.entities.Video;
 import com.example.yt_tv.repositories.ChannelRepository;
 import com.example.yt_tv.repositories.PlaylistChannelRepository;
 import com.example.yt_tv.repositories.VideoRepository;
+import com.example.yt_tv.repositories.WatchedVideoRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -24,6 +27,10 @@ public class ChannelService {
     private final YoutubeApiClient youtubeApiClient;
     private final VideoRepository videoRepository;
     private final PlaylistChannelRepository playlistChannelRepository;
+    private final WatchedVideoRepository watchedVideoRepository;
+
+    private final AiCategorizerService aiCategorizerService;
+    private final AiSyncService aiSyncService;
 
     @Transactional
     public ChannelDto create(ChannelCreateDto channelCreateDto) {
@@ -59,6 +66,11 @@ public class ChannelService {
     @Transactional
     public void delete(Long id) {
         List<Video> videos = videoRepository.findByChannelId(id);
+
+        for (Video video : videos) {
+            watchedVideoRepository.deleteByVideoId(video.getId());
+        }
+
         videoRepository.deleteAll(videos);
 
         List<PlaylistChannel> playlistChannels = playlistChannelRepository.findByChannelId(id);
@@ -92,7 +104,32 @@ public class ChannelService {
             channel.setUploadsPlaylistId(response.uploadsPlaylistId());
         }
 
+        if (response.videos().isEmpty()) {
+            System.out.println("AI Warning: Youtube returned 0 videos for: " + channel.getName());
+        }
+
+        if (channel.getCategory() == null || channel.getCategory().isEmpty()) {
+            if (!response.videos().isEmpty()) {
+                try {
+                    System.out.println("AI: Categorizing channel " + channel.getName() + "...");
+                    List<String> hints = youtubeApiClient.getChannelTopics(channel.getYtChannelId());
+
+                    String category = aiCategorizerService.categorizeChannel(channel.getName(), response.videos(), hints);
+
+                    channel.setCategory(category);
+                    System.out.println("AI: Categorized as -> " + category);
+                } catch (Exception e) {
+                    System.err.println("AI Categorization failed: " + e.getMessage());
+                    channel.setCategory("Entertainment");
+                }
+            }
+        } else {
+            System.out.println("AI: Channel already has category: " + channel.getCategory());
+        }
+
         int addedCount = 0;
+        List<YoutubeVideoInfo> newVideosForAi = new ArrayList<>();
+
         for (YoutubeVideoInfo info : response.videos()) {
             Optional<Video> existing = videoRepository.findByYtVideoId(info.videoId());
 
@@ -103,6 +140,7 @@ public class ChannelService {
                 video.setTitle(info.title());
                 video.setThumbnailUrl(info.thumbnail());
                 videoRepository.save(video);
+                newVideosForAi.add(info);
                 addedCount++;
             }
         }
@@ -110,6 +148,16 @@ public class ChannelService {
         channel.setLastSync(Instant.now());
         channelRepository.save(channel);
         System.out.println("Synced channel " + channel.getName() + ": Added " + addedCount + " new videos.");
+
+        if (!newVideosForAi.isEmpty()) {
+            try {
+                aiSyncService.addVideosToVectorDb(newVideosForAi, channel.getName(), channel.getCategory());
+            } catch (Exception e) {
+                System.err.println("Warning: AI Ingestion failed: " + e.getMessage());
+            }
+        } else {
+            System.out.println("AI: No new videos found for channel " + channel.getName());
+        }
     }
 
     @Transactional

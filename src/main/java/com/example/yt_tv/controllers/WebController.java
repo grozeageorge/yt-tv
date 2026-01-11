@@ -5,13 +5,16 @@ import com.example.yt_tv.entities.User;
 import com.example.yt_tv.repositories.UserRepository;
 import com.example.yt_tv.services.*;
 import jakarta.servlet.http.HttpSession;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.security.Principal;
+import java.util.List;
 import java.util.Optional;
 
 @Controller
@@ -54,9 +57,19 @@ public class WebController {
     }
 
     @PostMapping("/register")
-    public String handleRegister(@ModelAttribute UserCreateDto userDto) {
-        userService.create(userDto);
-        return "redirect:/login";
+    public String handleRegister(@Valid @ModelAttribute UserCreateDto userDto, BindingResult result, Model model) {
+        if (result.hasErrors()) {
+            return "register";
+        }
+
+        try {
+            userService.create(userDto);
+        } catch (Exception e) {
+            model.addAttribute("error", "Username or Email already exists.");
+            return "register";
+        }
+
+        return "redirect:/login?registered";
     }
 
     @GetMapping("/logout")
@@ -79,7 +92,13 @@ public class WebController {
     }
 
     @PostMapping("/playlists/create")
-    public String createPlaylist(@ModelAttribute PlaylistCreateDto createDto, Principal principal) {
+    public String createPlaylist(@Valid @ModelAttribute PlaylistCreateDto createDto,BindingResult result, Principal principal, RedirectAttributes redirectAttributes) {
+        if (result.hasErrors()) {
+            String errorMsg = result.getFieldError().getDefaultMessage();
+            redirectAttributes.addFlashAttribute("error", errorMsg);
+            return "redirect:/dashboard";
+        }
+
         User user = getLoggedInUser(principal);
         playlistService.createPlaylist(user, createDto);
         return "redirect:/dashboard";
@@ -200,5 +219,25 @@ public class WebController {
     public String deleteChannel(@PathVariable Long id) {
         channelService.delete(id);
         return "redirect:/channels";
+    }
+
+    @GetMapping("/chat")
+    public String chatPage() {
+        return "chat";
+    }
+
+    @PostMapping("/play/custom")
+    public String playCustomQueue(@RequestParam("videoIds") List<String> videoIds,
+                                  @RequestParam(value = "originalQuery", required = false) String originalQuery, // <--- NEW PARAM
+                                  Model model) {
+        if (videoIds == null || videoIds.isEmpty()) {
+            return "redirect:/dashboard";
+        }
+
+        model.addAttribute("videoQueue", videoIds);
+        model.addAttribute("playlistId", null);
+        model.addAttribute("originalQuery", originalQuery); // <--- PASS TO UI
+
+        return "tv_player";
     }
 }

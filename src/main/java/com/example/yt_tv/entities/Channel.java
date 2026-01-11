@@ -35,4 +35,7 @@ public class Channel {
 
     @Column
     private String uploadsPlaylistId;
+
+    @Column
+    private String category;
 }

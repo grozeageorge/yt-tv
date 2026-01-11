@@ -25,6 +25,10 @@
                 Delete Playlist
             </a>
 
+            <button class="btn btn-outline-warning me-3" onclick="getChannelSuggestions()">
+                ✨ Suggest Channels
+            </button>
+
             <a th:href="@{/play/playlist/{id}(id=${playlist.id})}" class="btn btn-lg btn-danger px-5">
                 PLAY TV &#9658;
             </a>
@@ -40,6 +44,16 @@
     <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
         <span th:text="${error}"></span>
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+
+
+    <div id="ai-suggestions-container" class="mb-4" style="display:none;">
+        <div class="card p-3 bg-dark border-secondary">
+            <h5 class="text-warning">AI Recommendations for <span th:text="${playlist.name}"></span></h5>
+            <div id="ai-suggestions-list" class="d-flex flex-wrap gap-2">
+                <!-- Suggestions will appear here -->
+            </div>
+        </div>
     </div>
 
     <div class="row">
@@ -115,6 +129,13 @@
         </div>
     </div>
 </div>
+
+<script th:inline="javascript">
+    const currentPlaylistId = [[${playlist.id}]];
+    const currentPlaylistName = [[${playlist.name}]];
+</script>
+
+<script th:src="@{/js/playlist.js}"></script>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>

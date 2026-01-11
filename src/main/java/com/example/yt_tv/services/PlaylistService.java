@@ -9,9 +9,11 @@ import com.example.yt_tv.repositories.PlaylistRepository;
 import com.example.yt_tv.repositories.VideoRepository;
 import com.example.yt_tv.repositories.WatchedVideoRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -24,6 +26,8 @@ public class PlaylistService {
     private final VideoRepository videoRepository;
     private final WatchedVideoRepository watchedVideoRepository;
     private final DtoMapper dtoMapper;
+
+    @Lazy
     private final ChannelService channelService;
 
 
@@ -66,6 +70,22 @@ public class PlaylistService {
 
     @Transactional
     public void deletePlaylist(Long id) {
+        Playlist playlist = playlistRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Playlist not found with id: " + id));
+
+        List<PlaylistChannel> links = new ArrayList<>(playlist.getPlaylistChannels());
+
+        playlist.getPlaylistChannels().clear();
+        playlistRepository.save(playlist);
+
+        for (PlaylistChannel pc : links) {
+            Channel channel = pc.getChannel();
+            if (channel != null) {
+                System.out.println("Deleting Global Channel: " + channel.getName());
+                channelService.delete(channel.getId());
+            }
+        }
+
         playlistRepository.deleteById(id);
     }
 
@@ -115,29 +135,6 @@ public class PlaylistService {
 
         Playlist saved = playlistRepository.save(playlist);
         return dtoMapper.toPlaylistDto(saved);
-    }
-
-    @Transactional(readOnly = true)
-    public List<String> getVideoQueue(Long playlistId) {
-        Playlist playlist = playlistRepository.findById(playlistId)
-                .orElseThrow(() -> new IllegalArgumentException("Playlist not found"));
-
-        if (playlist.getPlaylistChannels().isEmpty()) {
-            return Collections.emptyList();
-        }
-
-        List<Long> channelIds = playlist.getPlaylistChannels().stream()
-                .map(pc -> pc.getChannel().getId())
-                .toList();
-
-        // If this line is red, you need to add the method to VideoRepository (see Step 3)
-        List<Video> allVideos = videoRepository.findByChannelIdIn(channelIds);
-
-        Collections.shuffle(allVideos);
-
-        return allVideos.stream()
-                .map(Video::getYtVideoId)
-                .collect(Collectors.toList());
     }
 
     @Transactional

@@ -13,6 +13,5 @@ public interface WatchedVideoRepository extends JpaRepository<WatchedVideo, Long
     Optional<WatchedVideo> findByUserIdAndVideoId(Long userId, Long videoId);
     List<WatchedVideo> findByUserId(Long userId);
     void deleteByUserIdAndVideoId(Long userId, Long videoId);
-
-    Long user(User user);
+    void deleteByVideoId(Long videoId);
 }

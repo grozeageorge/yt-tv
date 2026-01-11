@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -94,8 +95,14 @@ public class WatchedVideoService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-        Video video = videoRepository.findByYtVideoId(ytVideoId)
-                .orElseThrow(() -> new IllegalArgumentException("Video not found"));
+        Optional<Video> videoOpt = videoRepository.findByYtVideoId(ytVideoId);
+
+        if (videoOpt.isEmpty()) {
+            System.out.println("Warning: Tried to mark non-existent video as watched: " + ytVideoId);
+            return;
+        }
+
+        Video video = videoOpt.get();
 
         WatchedVideo wv = watchedVideoRepository.findByUserIdAndVideoId(userId, video.getId())
                 .orElseGet(() -> dtoMapper.toWatchedVideoEntity(user, video));

@@ -25,6 +25,10 @@ public class PlaylistChannelService {
 
     @Transactional
     public PlaylistChannelDto addChannelToPlaylist(AddChannelToPlaylistDto addDto) {
+        if (playlistChannelRepository.existsByPlaylistIdAndChannelId(addDto.getPlaylistId(), addDto.getChannelId())) {
+            throw new IllegalArgumentException("Channel is already in this playlist!");
+        }
+
         Playlist playlist = playlistRepository.findById(addDto.getPlaylistId())
                 .orElseThrow(() -> new IllegalArgumentException("Playlist not found"));
         Channel channel = channelRepository.findById(addDto.getChannelId())

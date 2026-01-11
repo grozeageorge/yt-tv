@@ -1,0 +1,42 @@
+function getChannelSuggestions() {
+    const container = document.getElementById('ai-suggestions-container');
+    const list = document.getElementById('ai-suggestions-list');
+
+    // Show the container
+    container.style.display = 'block';
+    list.innerHTML = '<span class="text-white">Asking Nova for recommendations...</span>';
+
+    // Call the API using the global variable 'currentPlaylistId'
+    fetch('/api/ai/suggest-channels?playlistId=' + currentPlaylistId, { method: 'POST' })
+        .then(res => res.json())
+        .then(data => {
+            list.innerHTML = ''; // Clear loading message
+
+            if (!data.suggestions || data.suggestions.length === 0) {
+                list.innerHTML = '<span class="text-secondary">No suggestions found.</span>';
+                return;
+            }
+
+            data.suggestions.forEach(name => {
+                // Create a badge that acts as a quick-add form
+                const badge = document.createElement('div');
+
+                // Construct the form action URL dynamically using the ID
+                const actionUrl = '/playlist/' + currentPlaylistId + '/add-channel-query';
+
+                badge.innerHTML = `
+                    <form action="${actionUrl}" method="post" style="display:inline">
+                        <input type="hidden" name="query" value="${name}">
+                        <button type="submit" class="btn btn-sm btn-outline-light rounded-pill m-1">
+                            + ${name}
+                        </button>
+                    </form>
+                `;
+                list.appendChild(badge);
+            });
+        })
+        .catch(err => {
+            console.error(err);
+            list.innerHTML = '<span class="text-danger">Error contacting AI.</span>';
+        });
+}

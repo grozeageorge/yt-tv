@@ -8,14 +8,27 @@
 
 <!-- Top Controls -->
 <div id="controls">
+
     <div>
-        <a th:href="@{/playlist/{id}(id=${playlistId})}" class="btn-player btn-secondary">&larr; Back to Playlist</a>
+        <!-- Logic: If playlistId exists, link to it. Otherwise link to Dashboard. -->
+        <a th:href="${playlistId != null} ? @{/playlist/{id}(id=${playlistId})} : @{/dashboard}"
+           class="btn-player btn-secondary">
+            &larr; Back
+        </a>
     </div>
+
+
     <div id="now-playing">Loading TV...</div>
     <div>
         <button onclick="nextVideo()" class="btn-player btn-red">Next Video &rarr;</button>
     </div>
 </div>
+
+
+<form id="aiReloadForm" th:action="@{/play/custom}" method="post" style="display:none;">
+    <input type="hidden" name="videoIds" id="nextBatchIds">
+    <input type="hidden" name="originalQuery" id="nextBatchQuery">
+</form>
 
 <!-- The YouTube Player Embed (Now Below) -->
 <div id="player-container">
@@ -24,6 +37,8 @@
 
 <script th:inline="javascript">
     const videoQueue = /*[[${videoQueue}]]*/ [];
+    const currentPlaylistId = /*[[${playlistId}]]*/ null;
+    const originalAiQuery = /*[[${originalQuery}]]*/ null;
 </script>
 <script th:src="@{/js/tv-player.js}"></script>
 
