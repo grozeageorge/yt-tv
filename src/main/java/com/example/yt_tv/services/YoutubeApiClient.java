@@ -8,7 +8,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
-import org.springframework.web.util.UriBuilder;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -134,7 +133,7 @@ public class YoutubeApiClient {
             JsonNode root = objectMapper.readTree(response);
             List<String> topics = new ArrayList<>();
 
-            if (root.path("items").isArray() && root.path("items").size() > 0) {
+            if (root.path("items").isArray() && !root.path("items").isEmpty()) {
                 JsonNode categories = root.path("items").get(0).path("topicDetails").path("topicCategories");
                 if (categories.isArray()) {
                     for (JsonNode category : categories) {
@@ -294,7 +293,7 @@ public class YoutubeApiClient {
             JsonNode root = objectMapper.readTree(response);
             JsonNode items = root.path("items");
 
-            if (items.isArray() && items.size() > 0) {
+            if (items.isArray() && !items.isEmpty()) {
                 return items.get(0)
                         .path("contentDetails")
                         .path("relatedPlaylists")
@@ -305,39 +304,5 @@ public class YoutubeApiClient {
             e.printStackTrace();
         }
         return null;
-    }
-
-
-
-    // Universal Parser
-    private List<YoutubeVideoInfo> parseVideoList(String jsonResponse, boolean isPlaylist) {
-        List<YoutubeVideoInfo> videos = new ArrayList<>();
-        try {
-            JsonNode root = objectMapper.readTree(jsonResponse);
-            JsonNode items = root.path("items");
-
-            if (items.isArray()) {
-                for (JsonNode item : items) {
-                    JsonNode snippet = item.path("snippet");
-                    String videoId;
-
-                    if (isPlaylist) {
-                        videoId = snippet.path("resourceId").path("videoId").asText();
-                    } else {
-                        videoId = item.path("id").path("videoId").asText();
-                    }
-
-                    String title = snippet.path("title").asText();
-                    String thumb = snippet.path("thumbnails").path("medium").path("url").asText();
-
-                    if (videoId != null && !videoId.isEmpty()) {
-                        videos.add(new YoutubeVideoInfo(videoId, title, thumb));
-                    }
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return videos;
     }
 }

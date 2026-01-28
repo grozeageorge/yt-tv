@@ -9,14 +9,9 @@ import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
-import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Function;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
 
 @Service
 public class AiChatService {
@@ -42,6 +37,7 @@ public class AiChatService {
                 2. IDENTITY (User asks "who are you?", "what is your name?", "what can you do?")
                 3. OFF_TOPIC (User asks about weather, math, history, coding, or general knowledge unrelated to the TV library)
                 
+                Be strict. If someone asks what is the best car to buy, don't give tech videos, that is an off topic question.
                 Respond with JUST the category name. Nothing else.
                 """;
 
@@ -176,7 +172,7 @@ public class AiChatService {
     private ChatResponseDto handleIdentityIntent(String userQuery) {
         String prompt = """
                 User asked: "{query}"
-                Answer that your name is %s. 
+                Answer that your name is %s.
                 You are their personal AI curator for this YouTube TV app. 
                 Your job is to organize their library and help them discover content.
                 Be brief and friendly.
@@ -190,8 +186,9 @@ public class AiChatService {
     private ChatResponseDto handleOffTopicIntent(String userQuery) {
         String prompt = """
                 User asked: "{query}"
-                Politely refuse to answer. 
-                State that as %s (a video curator), you only have access to their video library, not real-world information.
+                Politely refuse to answer.
+                You are %s a video curator.
+                State that you only have access to their video library, not real-world information.
                 Ask them to request a video topic instead.
                 """.formatted(AI_NAME);
 
