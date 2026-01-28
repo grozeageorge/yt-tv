@@ -1,5 +1,7 @@
 package com.example.yt_tv.services;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.vectorstore.SearchRequest;
@@ -7,6 +9,7 @@ import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.stereotype.Service;
 import org.springframework.ai.document.Document;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -63,45 +66,86 @@ public class AiChannelService {
                 docs.forEach(d -> communityChannels.add((String) d.getMetadata().get("channel")));
             }
         } else {
-            // Fallback: Use Playlist Name
-            List<Document> docs = vectorStore.similaritySearch(
-                    SearchRequest.builder().query(playlistName).topK(10).build()
-            );
-            docs.forEach(d -> communityChannels.add((String) d.getMetadata().get("channel")));
+            // No categories detected → do NOT guess
+            return "";
         }
 
         // Remove channels we already have
-        communityChannels.removeAll(currentChannels);
+        currentChannels.forEach(communityChannels::remove);
 
-        // 3. ASK GEMMA
         String categoriesStr = identifiedCategories.isEmpty() ? "Unknown" : String.join(", ", identifiedCategories);
-        String communityHint = communityChannels.isEmpty() ? "None found in DB" : String.join(", ", communityChannels);
+        String communityHint = communityChannels.isEmpty() ? "" : String.join(", ", communityChannels);
 
         String prompt = """
-                You are a YouTube Expert.
-                
-                Context:
-                - Playlist Name: "%s"
-                - User's Current Channels: %s
-                - Detected Categories: %s
-                
-                Community Library Suggestions (Channels found in your local database): [%s]
-                
-                Task: Recommend exactly 3 NEW YouTube channels.
-                
-                STRATEGY:
-                1. If "Community Library Suggestions" has channels that fit the Detected Categories, RECOMMEND THEM FIRST. (This helps the user reuse existing data).
-                2. If the Community list is empty or unrelated, suggest famous external channels that fit the Categories.
-                3. If Mixed Categories (e.g. Pop + Science), suggest a mix (e.g. 1 Pop channel, 1 Science channel).
-                
-                CRITICAL RULES:
-                - Do NOT suggest channels from "Current Channels".
-                - Return ONLY comma-separated names.
-                - Return "NONE" if you can't find any.
-                """.formatted(playlistName, String.join(", ", currentChannels), categoriesStr, communityHint);
+            You are a recommendation engine.
+            
+            TASK:
+            Suggest EXACTLY 3 YouTube channel names.
+            
+            CONTEXT:
+            Playlist Name: "%s"
+            Detected Categories: %s
+            Current Channels (DO NOT USE): %s
+            Available Channels (ONLY OPTIONS THAT YOU CAN USE): %s
+            
+            RULES (MANDATORY):
+            - You MUST select channels ONLY from Available Channels that are NOT listed in Current Channels.
+            - Do NOT invent or rename channels.
+            - Respond in VALID JSON ONLY
+            - NO explanations
+            - NO markdown
+            - NO extra text
+            - Channel names must be strings
+            - Must not include current channels
+            
+            OUTPUT FORMAT (STRICT):
+            {
+              "channels": ["Channel 1", "Channel 2", "Channel 3"]
+            }
+            
+            If fewer than 3 exist, return:
+            {
+              "channels": []
+            }
+            """.formatted(
+                playlistName,
+                categoriesStr,
+                String.join(", ", currentChannels),
+                communityHint
+            );
 
         String response = chatClient.prompt(prompt).call().content();
-        if (response == null) return "";
-        return response.replace("\n", "").trim();
+        if (response == null || response.isBlank()) return "";
+
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode root = mapper.readTree(response);
+            JsonNode channelsNode = root.get("channels");
+
+            if (channelsNode == null || !channelsNode.isArray()) return "";
+
+            List<String> channels = new ArrayList<>();
+            for (JsonNode node : channelsNode) {
+                String name = node.asText().trim();
+                if (!name.isEmpty()) {
+                    channels.add(name);
+                }
+            }
+
+            Set<String> allowed = communityChannels.stream()
+                    .map(String::toLowerCase)
+                    .collect(Collectors.toSet());
+
+            List<String> finalChannels = channels.stream()
+                    .filter(c -> allowed.contains(c.toLowerCase()))
+                    .limit(3)
+                    .toList();
+
+            return String.join(",", finalChannels);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "No channels found";
+        }
     }
 }

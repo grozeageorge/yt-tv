@@ -1,17 +1,22 @@
 package com.example.yt_tv.services;
 
 import com.example.yt_tv.dtos.ChatResponseDto;
-import com.example.yt_tv.entities.WatchedVideo;
+// import com.example.yt_tv.entities.WatchedVideo;
 import com.example.yt_tv.repositories.WatchedVideoRepository;
+import com.example.yt_tv.tools.VideoSearchFunction;
+import com.example.yt_tv.tools.VideoSearchRequest;
+import com.example.yt_tv.tools.VideoSearchResponse;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.prompt.PromptTemplate;
-import org.springframework.ai.document.Document;
-import org.springframework.ai.vectorstore.SearchRequest;
+// import org.springframework.ai.document.Document;
+// import org.springframework.ai.vectorstore.SearchRequest;
+import org.springframework.ai.tool.function.FunctionToolCallback;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Service
 public class AiChatService {
@@ -28,6 +33,104 @@ public class AiChatService {
     }
 
     public ChatResponseDto chatWithData(String userQuery, Long userId) {
+
+        Intent intent = classifyIntent(userQuery);
+
+        return switch (intent) {
+            case IDENTITY -> identityResponse();
+            case OFF_TOPIC -> offTopicResponse();
+            case SEARCH -> handleSearch(userQuery, userId);
+        };
+    }
+
+    // ROUTER AI
+    private Intent classifyIntent(String query) {
+        String prompt = """
+                Classify the user input into exactly ONE category:
+                
+                SEARCH -> asking for videos, playlists, music, topics, channnels
+                IDENTITY -> asking who you are or what you do
+                OFF_TOPIC -> anything unrelated to Youtube Videos.
+                
+                Respond with only: SEARCH, IDENTITY, or OFF_TOPIC.
+                Input: "%s"
+                """.formatted(query);
+
+        String result = chatClient.prompt(prompt).call().content().trim().toUpperCase();
+
+        try {
+            return Intent.valueOf(result);
+        } catch (Exception e) {
+            return Intent.OFF_TOPIC;
+        }
+    }
+
+    private ChatResponseDto identityResponse() {
+        return new ChatResponseDto(
+                "Hi, I am Nova - your YouTube TV AI curator. I organize playlists and help you discover videos.",
+                List.of()
+        );
+    }
+
+    private ChatResponseDto offTopicResponse() {
+        return new ChatResponseDto(
+                "I can only help with YouTube video playlists and discovery.",
+                List.of()
+        );
+    }
+
+    private ChatResponseDto handleSearch(String userQuery, Long userId) {
+        AtomicReference<List<String>> capturedVideoIds = new AtomicReference<>(List.of());
+
+        VideoSearchFunction searchFunction =
+                new VideoSearchFunction(vectorStore, watchedVideoRepository, userId);
+
+        searchFunction.setVideoIdsListener(capturedVideoIds::set);
+
+        FunctionToolCallback<VideoSearchRequest, VideoSearchResponse> searchTool =
+                FunctionToolCallback.builder("searchVideos", searchFunction)
+                        .description("""
+                            Search the video database.
+                            Use ONLY when the user asks for videos, playlists, music, topics, or channels.
+                            Do NOT use for identity or off-topic questions.
+                            """)
+                        .inputType(VideoSearchRequest.class)
+                        .build();
+
+        String agentPrompt = """
+            You are %s, an AI video curator.
+
+            USER REQUEST: "{query}"
+
+            INSTRUCTIONS:
+            - Decide if a search is needed.
+            - If yes, call searchVideos.
+            - Use categoryFilter ONLY if the request clearly maps to a known category.
+            - Otherwise, put everything in query.
+            - After tool results, explain briefly what you found and ask if the user wants to play.
+
+            CONSTRAINTS:
+            - Never invent videos.
+            - Never call tools unnecessarily.
+            - No quotes.
+            """.formatted(AI_NAME);
+
+        String aiText = chatClient
+                .prompt(new PromptTemplate(agentPrompt).create(Map.of("query", userQuery)))
+                .toolCallbacks(searchTool)
+                .call()
+                .content();
+
+        return new ChatResponseDto(cleanQuotes(aiText), capturedVideoIds.get());
+
+    }
+
+    private String cleanQuotes(String text) {
+        if (text == null) return "";
+        return text.replaceAll("^[\"']+|[\"']+$", "").trim();
+    }
+
+    /*public ChatResponseDto chatWithData(String userQuery, Long userId) {
         // STEP 1: CLASSIFY INTENT
         String classificationPrompt = """
                 Analyze the user input: "{query}"
@@ -202,5 +305,5 @@ public class AiChatService {
         while (text.startsWith("\"") || text.startsWith("“") || text.startsWith("'")) text = text.substring(1).trim();
         while (text.endsWith("\"") || text.endsWith("”") || text.endsWith("'")) text = text.substring(0, text.length() - 1).trim();
         return text;
-    }
+    } */
 }
