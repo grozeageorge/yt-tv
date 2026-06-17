@@ -1,6 +1,10 @@
 # YT-TV: AI-Driven Video Curation Platform
 
-![Java](https://img.shields.org/badge/Java-21-orange) ![Spring Boot](https://img.shields.org/badge/Spring_Boot-3.4-green) ![Spring AI](https://img.shields.org/badge/Spring_AI-Agentic-blueviolet) ![Architecture](https://img.shields.org/badge/Architecture-RAG-blue) ![License](https://img.shields.org/badge/License-MIT-lightgrey)
+![Java](https://img.shields.org/badge/Java-21-orange.svg)
+![Spring Boot](https://img.shields.org/badge/Spring_Boot-3.4-green.svg)
+![Spring AI](https://img.shields.org/badge/Spring_AI-Agentic-blueviolet.svg)
+![Architecture](https://img.shields.org/badge/Architecture-RAG-blue.svg)
+![License](https://img.shields.org/badge/License-MIT-lightgrey.svg)
 
 ## Project Overview
 
@@ -52,6 +56,16 @@ One of the main challenges was creating a seamless playback loop without hitting
 ### Data Integrity vs. Vector Search
 Deleting a channel in a relational DB is straightforward, but syncing that state with a Vector DB is complex.
 *   **Solution:** I implemented a "Safe Delete" transaction. When a channel is removed, the system first clears the relational watch history (to prevent FK violations), deletes the SQL entries, but **retains** the Vector data. This allows the "Community Library" feature, where content added by one user remains discoverable via AI for other users.
+
+## AI Search Pipeline
+- Queries are parsed into categories and/or channel names, then a vector search runs on Chroma.
+- If strict category/channel filtering returns no matches, the search falls back to semantic results.
+- The response text is generated from the matched documents only, and the Play button uses returned video IDs.
+
+## Chroma Data Persistence
+- Chroma data is stored in the Docker volume `chroma-data`.
+- `docker compose down` keeps data; `docker compose down -v` deletes it.
+- Docker Desktop may show `0 bytes` for volumes even when data exists.
 
 ## Tech Stack
 

@@ -31,3 +31,23 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Env file ###
+.env
+
+### Node.js (MCP Server) ###
+**/node_modules/
+**/npm-debug.log*
+mcp-server/dist/
+mcp-server/build/
+
+### Docker & Databases ###
+**/data/
+**/chroma-data/
+**/mssql-data/
+*.db
+
+### OS & Logs ###
+*.log
+.DS_Store
+Thumbs.db
