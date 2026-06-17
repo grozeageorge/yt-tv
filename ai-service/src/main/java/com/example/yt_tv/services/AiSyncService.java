@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Profile;
 import com.example.yt_tv.tools.NormalizationUtils;
 
 import java.util.ArrayList;
@@ -14,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 
 @Service
+@Profile("!aws")
 @RequiredArgsConstructor
 @Slf4j
 public class AiSyncService {

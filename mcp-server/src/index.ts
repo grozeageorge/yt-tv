@@ -6,7 +6,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import express from "express";
 import cors from "cors";
-import sql from "mssql";
+import { Pool } from "pg";
 
 const app = express();
 app.use(cors());
@@ -23,24 +23,19 @@ const server = new Server(
   }
 );
 
-// Database configuration
-const dbConfig: sql.config = {
-  user: process.env.DB_USERNAME || "sa",
-  password: process.env.DB_PASSWORD || "sapassword",
+// Database configuration (PostgreSQL)
+const pool = new Pool({
+  user: process.env.DB_USERNAME || "postgres",
+  host: process.env.DB_HOST || "localhost",
   database: process.env.DB_NAME || "yt_tv",
-  server: process.env.DB_HOST || "localhost",
-  port: parseInt(process.env.DB_PORT || "1433"),
-  options: {
-    encrypt: false, // For local dev
-    trustServerCertificate: true,
-  },
-};
+  password: process.env.DB_PASSWORD || "postgres",
+  port: parseInt(process.env.DB_PORT || "5432"),
+});
 
 async function executeQuery(query: string) {
   try {
-    const pool = await sql.connect(dbConfig);
-    const result = await pool.request().query(query);
-    return result.recordset;
+    const result = await pool.query(query);
+    return result.rows;
   } catch (err) {
     console.error("Database error:", err);
     throw err;
@@ -53,13 +48,9 @@ async function executeQuery(query: string) {
  */
 async function countPlaylistsForUser(userId: number) {
   try {
-    const pool = await sql.connect(dbConfig);
-    const request = pool.request();
-    // Use BigInt to support large user ids; fall back to Int if needed by your schema
-    request.input("userId", sql.BigInt, userId);
-    const result = await request.query("SELECT COUNT(*) AS count FROM playlists WHERE user_id = @userId");
-    const row = result.recordset && result.recordset[0];
-    return row ? parseInt(row.count, 10) || 0 : 0;
+    const result = await pool.query("SELECT COUNT(*) AS count FROM playlists WHERE user_id = $1", [userId]);
+    const row = result.rows && result.rows[0];
+    return row ? parseInt(String(row.count), 10) || 0 : 0;
   } catch (err) {
     console.error("Database error (countPlaylistsForUser):", err);
     throw err;

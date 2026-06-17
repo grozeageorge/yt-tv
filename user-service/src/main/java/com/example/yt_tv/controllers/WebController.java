@@ -9,6 +9,7 @@ import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.env.Environment;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -29,6 +30,7 @@ public class WebController {
     private final ContentClient contentClient;
     private final PlaylistClient playlistClient;
     private final AiClient aiClient;
+    private final Environment env;
 
     // --- HELPER ---
 
@@ -89,6 +91,7 @@ public class WebController {
         model.addAttribute("username", user.getUsername());
         model.addAttribute("playlists", playlistClient.listPlaylists(user.getId()));
         model.addAttribute("newPlaylist", new PlaylistCreateDto());
+        model.addAttribute("aiEnabled", !env.acceptsProfiles("aws"));
         return "dashboard";
     }
 
@@ -98,6 +101,7 @@ public class WebController {
         if (user != null) {
             model.addAttribute("currentUserId", user.getId());
         }
+        model.addAttribute("aiEnabled", !env.acceptsProfiles("aws"));
         return "chat";
     }
 
@@ -109,6 +113,7 @@ public class WebController {
         PlaylistDto playlist = playlistClient.getPlaylist(id, user.getId());
         model.addAttribute("playlist", playlist);
         model.addAttribute("currentUserId", user.getId());
+        model.addAttribute("aiEnabled", !env.acceptsProfiles("aws"));
         return "playlist_view";
     }
 
@@ -234,6 +239,10 @@ public class WebController {
     @PostMapping("/api/ai/suggest-channels")
     @ResponseBody
     public Map<String, List<String>> suggestChannels(@RequestParam Long playlistId, Principal principal) {
+        // If running in AWS profile, AI features are disabled
+        if (env.acceptsProfiles("aws")) {
+            return Map.of("suggestions", List.of());
+        }
         User user = getLoggedInUser(principal);
         return aiClient.suggestChannels(playlistId, user.getId());
     }
@@ -241,6 +250,11 @@ public class WebController {
     @PostMapping("/api/ai/chat-full")
     @ResponseBody
     public ChatResponseDto chatFull(@RequestParam String message, Principal principal) {
+        if (env.acceptsProfiles("aws")) {
+            // ChatResponseDto is a Java record (immutable) and doesn't have a Lombok builder.
+            // Construct the record with its canonical constructor instead.
+            return new ChatResponseDto("AI features are currently disabled in the cloud environment.", List.of());
+        }
         User user = getLoggedInUser(principal);
         return aiClient.chatFull(message, user.getId());
     }

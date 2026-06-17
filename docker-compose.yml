@@ -1,21 +1,21 @@
 services:
-  sqlserver:
-    image: mcr.microsoft.com/mssql/server:2022-latest
-    container_name: yt-tv-sqlserver
+  postgres:
+    image: postgres:15-alpine
+    container_name: yt-tv-postgres
     ports:
-      - "1433:1433"
+      - "5432:5432"
     environment:
-      - ACCEPT_EULA=Y
-      - MSSQL_SA_PASSWORD=MyP@ssw0rd2024!
-      - MSSQL_PID=Developer
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=yt_tv
     volumes:
-      - mssql-data:/var/opt/mssql
+      - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD", "sleep", "1"]
-      interval: 30s
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
+      interval: 10s
       timeout: 5s
-      retries: 3
-      start_period: 60s
+      retries: 5
+      start_period: 10s
     networks:
       - yt-tv-network
 
@@ -121,13 +121,13 @@ services:
     container_name: yt-tv-user-service
     environment:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
-      - DB_HOST=sqlserver
-      - DB_PORT=1433
+      - DB_HOST=postgres
+      - DB_PORT=5432
       - DB_NAME=yt_tv
-      - DB_USERNAME=sa
-      - DB_PASSWORD=MyP@ssw0rd2024!
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=postgres
     depends_on:
-      sqlserver:
+      postgres:
         condition: service_healthy
       eureka-server:
         condition: service_healthy
@@ -143,17 +143,17 @@ services:
     container_name: yt-tv-content-service
     environment:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
-      - DB_HOST=sqlserver
-      - DB_PORT=1433
+      - DB_HOST=postgres
+      - DB_PORT=5432
       - DB_NAME=yt_tv
-      - DB_USERNAME=sa
-      - DB_PASSWORD=MyP@ssw0rd2024!
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=postgres
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
       - OLLAMA_URL=http://ollama:11434
       - CHROMA_HOST=http://chroma
       - CHROMA_PORT=8000
     depends_on:
-      sqlserver:
+      postgres:
         condition: service_healthy
       eureka-server:
         condition: service_healthy
@@ -169,13 +169,13 @@ services:
     container_name: yt-tv-playlist-service
     environment:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
-      - DB_HOST=sqlserver
-      - DB_PORT=1433
+      - DB_HOST=postgres
+      - DB_PORT=5432
       - DB_NAME=yt_tv
-      - DB_USERNAME=sa
-      - DB_PASSWORD=MyP@ssw0rd2024!
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=postgres
     depends_on:
-      sqlserver:
+      postgres:
         condition: service_healthy
       eureka-server:
         condition: service_healthy
@@ -212,19 +212,19 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - DB_HOST=sqlserver
-      - DB_PORT=1433
+      - DB_HOST=postgres
+      - DB_PORT=5432
       - DB_NAME=yt_tv
-      - DB_USERNAME=sa
-      - DB_PASSWORD=MyP@ssw0rd2024!
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=postgres
     depends_on:
-      sqlserver:
+      postgres:
         condition: service_healthy
     networks:
       - yt-tv-network
 
 volumes:
-  mssql-data:
+  pgdata:
   ollama-models:
   chroma-data:
 

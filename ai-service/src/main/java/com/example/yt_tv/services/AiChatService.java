@@ -10,6 +10,7 @@ import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.ai.document.Document;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Profile;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 
@@ -18,6 +19,7 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
+@Profile("!aws")
 public class AiChatService {
 
     private final ChatClient chatClient;

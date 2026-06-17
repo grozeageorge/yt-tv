@@ -2,6 +2,13 @@ function getChannelSuggestions() {
     const container = document.getElementById('ai-suggestions-container');
     const list = document.getElementById('ai-suggestions-list');
 
+    // If AI is disabled in this environment, show a friendly message and abort.
+    if (typeof aiEnabled !== 'undefined' && !aiEnabled) {
+        container.style.display = 'block';
+        list.innerHTML = '<span class="text-warning">AI features are disabled in this cloud environment to save resources.</span>';
+        return;
+    }
+
     // Show the container
     container.style.display = 'block';
     list.innerHTML = '<span class="text-white">Asking Nova for recommendations...</span>';

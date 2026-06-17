@@ -4,10 +4,12 @@ import com.example.yt_tv.dtos.YoutubeVideoInfo;
 import com.example.yt_tv.services.AiSyncService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.context.annotation.Profile;
 
 import java.util.List;
 
 @RestController
+@Profile("!aws")
 @RequestMapping("/api/ai/sync")
 @RequiredArgsConstructor
 public class ApiAiSyncController {

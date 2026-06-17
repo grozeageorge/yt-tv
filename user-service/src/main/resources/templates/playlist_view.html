@@ -137,6 +137,7 @@
     const currentPlaylistId = /*[[${playlist.id}]]*/ 0;
     const currentPlaylistName = /*[[${playlist.name}]]*/ "";
     const currentUserId = /*[[${currentUserId}]]*/ 0;
+    const aiEnabled = /*[[${aiEnabled}]]*/ true;
     // Get CSRF token for dynamic form submission
     const csrfToken = document.querySelector('meta[name="_csrf"]') ? document.querySelector('meta[name="_csrf"]').getAttribute('content') : '';
     const csrfHeader = document.querySelector('meta[name="_csrf_header"]') ? document.querySelector('meta[name="_csrf_header"]').getAttribute('content') : '';

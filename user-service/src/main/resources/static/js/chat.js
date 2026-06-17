@@ -6,6 +6,11 @@ function handleEnter(e) {
 }
 
 function sendMessage() {
+    // If AI is disabled in this environment, warn the user and do not call backend
+    if (typeof aiEnabled !== 'undefined' && !aiEnabled) {
+        alert('AI features are currently disabled in the cloud environment to save resources.');
+        return;
+    }
     const input = document.getElementById('user-input');
     const text = input.value.trim();
     if (!text) return;
