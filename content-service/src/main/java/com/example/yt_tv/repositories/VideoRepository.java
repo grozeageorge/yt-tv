@@ -11,14 +11,17 @@ import java.util.Optional;
 
 @Repository
 public interface VideoRepository extends JpaRepository<Video, Long> {
+
     List<Video> findByChannelId(Long channelId);
 
     Optional<Video> findByYtVideoId(String ytVideoId);
 
-    @Query(value = "SELECT TOP 1 * FROM videos WHERE channel_id = :channelId ORDER BY NEWID()", nativeQuery = true)
+    // PostgreSQL Fix: Replaced TOP 1 and NEWID() with RANDOM() and LIMIT 1
+    @Query(value = "SELECT * FROM videos WHERE channel_id = :channelId ORDER BY RANDOM() LIMIT 1", nativeQuery = true)
     Optional<Video> findRandomByChannelId(@Param("channelId") Long channelId);
 
-    @Query(value = "SELECT * FROM videos WHERE channel_id = :channelId ORDER BY NEWID() OFFSET 0 ROWS FETCH NEXT :limit ROWS ONLY", nativeQuery = true)
+    // PostgreSQL Fix: Replaced NEWID() and FETCH NEXT with RANDOM() and LIMIT
+    @Query(value = "SELECT * FROM videos WHERE channel_id = :channelId ORDER BY RANDOM() LIMIT :limit", nativeQuery = true)
     List<Video> findRandomByChannelIdWithLimit(@Param("channelId") Long channelId, @Param("limit") int limit);
 
     List<Video> findByChannelIdIn(List<Long> channelIds);
