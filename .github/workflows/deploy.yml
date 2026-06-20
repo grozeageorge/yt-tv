@@ -68,7 +68,7 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v2
         
       - run: |
-          docker build -t ${{ steps.login-ecr.outputs.registry }}/eureka-server:latest .
+          docker build -f ../Dockerfile.microservice -t ${{ steps.login-ecr.outputs.registry }}/eureka-server:latest .
           docker push ${{ steps.login-ecr.outputs.registry }}/eureka-server:latest
           
       - run: |
@@ -105,7 +105,7 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v2
         
       - run: |
-          docker build -t ${{ steps.login-ecr.outputs.registry }}/gateway-service:latest .
+          docker build -f ../Dockerfile.microservice -t ${{ steps.login-ecr.outputs.registry }}/gateway-service:latest .
           docker push ${{ steps.login-ecr.outputs.registry }}/gateway-service:latest
           
       - run: |
@@ -142,7 +142,7 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v2
         
       - run: |
-          docker build -t ${{ steps.login-ecr.outputs.registry }}/content-service:latest .
+          docker build -f ../Dockerfile.microservice -t ${{ steps.login-ecr.outputs.registry }}/content-service:latest .
           docker push ${{ steps.login-ecr.outputs.registry }}/content-service:latest
           
       - run: |
@@ -179,7 +179,7 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v2
         
       - run: |
-          docker build -t ${{ steps.login-ecr.outputs.registry }}/user-service:latest .
+          docker build -f ../Dockerfile.microservice -t ${{ steps.login-ecr.outputs.registry }}/user-service:latest .
           docker push ${{ steps.login-ecr.outputs.registry }}/user-service:latest
           
       - run: |
@@ -216,7 +216,7 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v2
         
       - run: |
-          docker build -t ${{ steps.login-ecr.outputs.registry }}/playlist-service:latest .
+          docker build -f ../Dockerfile.microservice -t ${{ steps.login-ecr.outputs.registry }}/playlist-service:latest .
           docker push ${{ steps.login-ecr.outputs.registry }}/playlist-service:latest
           
       - run: |
