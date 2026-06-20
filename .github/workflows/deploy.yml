@@ -54,11 +54,9 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
-      - name: Build Common Module
-        working-directory: ./common
-        run: mvn clean install -DskipTests
-          
-      - run: mvn clean package -DskipTests
+      - name: Build Service and Dependencies
+        working-directory: .
+        run: mvn clean package -pl eureka-server -am -DskipTests
       
       - uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -93,11 +91,9 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
-      - name: Build Common Module
-        working-directory: ./common
-        run: mvn clean install -DskipTests
-          
-      - run: mvn clean package -DskipTests
+      - name: Build Service and Dependencies
+        working-directory: .
+        run: mvn clean package -pl gateway-service -am -DskipTests
       
       - uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -132,11 +128,9 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
-      - name: Build Common Module
-        working-directory: ./common
-        run: mvn clean install -DskipTests
-          
-      - run: mvn clean package -DskipTests
+      - name: Build Service and Dependencies
+        working-directory: .
+        run: mvn clean package -pl content-service -am -DskipTests
       
       - uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -171,11 +165,9 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
-      - name: Build Common Module
-        working-directory: ./common
-        run: mvn clean install -DskipTests
-          
-      - run: mvn clean package -DskipTests
+      - name: Build Service and Dependencies
+        working-directory: .
+        run: mvn clean package -pl user-service -am -DskipTests
       
       - uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -210,11 +202,9 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
-      - name: Build Common Module
-        working-directory: ./common
-        run: mvn clean install -DskipTests
-          
-      - run: mvn clean package -DskipTests
+      - name: Build Service and Dependencies
+        working-directory: .
+        run: mvn clean package -pl playlist-service -am -DskipTests
       
       - uses: aws-actions/configure-aws-credentials@v4
         with:

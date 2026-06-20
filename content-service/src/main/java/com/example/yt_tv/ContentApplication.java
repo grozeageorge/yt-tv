@@ -13,6 +13,6 @@ public class ContentApplication {
         SpringApplication.run(ContentApplication.class, args);
 
         // Added comment to test aws ci/cd with github actions.
-        System.out.println("CI/CD Pipeline Test V4");
+        System.out.println("CI/CD Pipeline Test V5");
     }
 }
