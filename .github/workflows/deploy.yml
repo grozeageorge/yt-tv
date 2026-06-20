@@ -30,7 +30,7 @@ jobs:
       - id: filter
         uses: dorny/paths-filter@v3
         with:
-          filters:
+          filters: |
             eureka: 'eureka-server/**'
             gateway: 'gateway-service/**'
             content: 'content-service/**'
