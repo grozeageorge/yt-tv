@@ -5,6 +5,7 @@ on:
     branches:
       - main
     paths:
+      - 'eureka-server/**'
       - 'gateway-service/**'
       - 'content-service/**'
       - 'user-service/**'
@@ -18,25 +19,60 @@ jobs:
   detect-changes:
     runs-on: ubuntu-latest
     outputs:
+      eureka: ${{ steps.filter.outputs.eureka }}
       gateway: ${{ steps.filter.outputs.gateway }}
       content: ${{ steps.filter.outputs.content }}
       user: ${{ steps.filter.outputs.user }}
       playlist: ${{ steps.filter.outputs.playlist }}
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Check Path Changes
-        id: filter
+      - uses: actions/checkout@v4
+      
+      - id: filter
         uses: dorny/paths-filter@v3
         with:
           filters:
+            eureka: 'eureka-server/**'
             gateway: 'gateway-service/**'
             content: 'content-service/**'
             user: 'user-service/**'
             playlist: 'playlist-service/**'
 
-  # JOB 2: Deploy Gateway Service (Only runs if gateway-service folder changed)
+  # JOB 2: Deploy Eureka Server
+  deploy-eureka:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.eureka == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./eureka-server
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'maven'
+          
+      - run: mvn clean package -DskipTests
+      
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+          
+      - id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+        
+      - run: |
+          docker build -t ${{ steps.login-ecr.outputs.registry }}/eureka-server:latest .
+          docker push ${{ steps.login-ecr.outputs.registry }}/eureka-server:latest
+          
+      - run: |
+          aws ecs update-service --cluster yt-tv-cluster --service yt-tv-eureka-service --force-new-deployment --region ${{ env.AWS_REGION }}
+
+  # JOB 3: Deploy Gateway Service
   deploy-gateway:
     needs: detect-changes
     if: needs.detect-changes.outputs.gateway == 'true'
@@ -46,32 +82,32 @@ jobs:
         working-directory: ./gateway-service
     steps:
       - uses: actions/checkout@v4
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
+      
+      - uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
           cache: 'maven'
-      - name: Build with Maven
-        run: mvn clean package -DskipTests
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+          
+      - run: mvn clean package -DskipTests
+      
+      - uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
-      - name: Log in to Amazon ECR
-        id: login-ecr
+          
+      - id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
-      - name: Build and Push Image
-        run: |
+        
+      - run: |
           docker build -t ${{ steps.login-ecr.outputs.registry }}/gateway-service:latest .
           docker push ${{ steps.login-ecr.outputs.registry }}/gateway-service:latest
-      - name: Force ECS Deployment
-        run: |
+          
+      - run: |
           aws ecs update-service --cluster yt-tv-cluster --service gateway-service --force-new-deployment --region ${{ env.AWS_REGION }}
 
-  # JOB 3: Deploy Content Service (Only runs if content-service folder changed)
+  # JOB 4: Deploy Content Service
   deploy-content:
     needs: detect-changes
     if: needs.detect-changes.outputs.content == 'true'
@@ -81,32 +117,32 @@ jobs:
         working-directory: ./content-service
     steps:
       - uses: actions/checkout@v4
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
+      
+      - uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
           cache: 'maven'
-      - name: Build with Maven
-        run: mvn clean package -DskipTests
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+          
+      - run: mvn clean package -DskipTests
+      
+      - uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
-      - name: Log in to Amazon ECR
-        id: login-ecr
+          
+      - id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
-      - name: Build and Push Image
-        run: |
+        
+      - run: |
           docker build -t ${{ steps.login-ecr.outputs.registry }}/content-service:latest .
           docker push ${{ steps.login-ecr.outputs.registry }}/content-service:latest
-      - name: Force ECS Deployment
-        run: |
+          
+      - run: |
           aws ecs update-service --cluster yt-tv-cluster --service content-service --force-new-deployment --region ${{ env.AWS_REGION }}
 
-  # JOB 4: Deploy User Service (Only runs if user-service folder changed)
+  # JOB 5: Deploy User Service
   deploy-user:
     needs: detect-changes
     if: needs.detect-changes.outputs.user == 'true'
@@ -116,32 +152,32 @@ jobs:
         working-directory: ./user-service
     steps:
       - uses: actions/checkout@v4
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
+      
+      - uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
           cache: 'maven'
-      - name: Build with Maven
-        run: mvn clean package -DskipTests
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+          
+      - run: mvn clean package -DskipTests
+      
+      - uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
-      - name: Log in to Amazon ECR
-        id: login-ecr
+          
+      - id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
-      - name: Build and Push Image
-        run: |
+        
+      - run: |
           docker build -t ${{ steps.login-ecr.outputs.registry }}/user-service:latest .
           docker push ${{ steps.login-ecr.outputs.registry }}/user-service:latest
-      - name: Force ECS Deployment
-        run: |
+          
+      - run: |
           aws ecs update-service --cluster yt-tv-cluster --service user-service --force-new-deployment --region ${{ env.AWS_REGION }}
 
-  # JOB 5: Deploy Playlist Service (Only runs if playlist-service folder changed)
+  # JOB 6: Deploy Playlist Service
   deploy-playlist:
     needs: detect-changes
     if: needs.detect-changes.outputs.playlist == 'true'
@@ -151,27 +187,27 @@ jobs:
         working-directory: ./playlist-service
     steps:
       - uses: actions/checkout@v4
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
+      
+      - uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
           cache: 'maven'
-      - name: Build with Maven
-        run: mvn clean package -DskipTests
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+          
+      - run: mvn clean package -DskipTests
+      
+      - uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
-      - name: Log in to Amazon ECR
-        id: login-ecr
+          
+      - id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
-      - name: Build and Push Image
-        run: |
+        
+      - run: |
           docker build -t ${{ steps.login-ecr.outputs.registry }}/playlist-service:latest .
           docker push ${{ steps.login-ecr.outputs.registry }}/playlist-service:latest
-      - name: Force ECS Deployment
-        run: |
+          
+      - run: |
           aws ecs update-service --cluster yt-tv-cluster --service playlist-service --force-new-deployment --region ${{ env.AWS_REGION }}

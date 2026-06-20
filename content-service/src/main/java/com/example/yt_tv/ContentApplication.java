@@ -12,4 +12,6 @@ public class ContentApplication {
     public static void main(String[] args) {
         SpringApplication.run(ContentApplication.class, args);
     }
+
+    // Added comment to test aws ci/cd with github actions.
 }
