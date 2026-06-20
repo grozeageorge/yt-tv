@@ -11,7 +11,8 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
 public class ContentApplication {
     public static void main(String[] args) {
         SpringApplication.run(ContentApplication.class, args);
-    }
 
-    // Added comment to test aws ci/cd with github actions.
+        // Added comment to test aws ci/cd with github actions.
+        System.out.println("CI/CD Pipeline Test");
+    }
 }
