@@ -1,0 +1,177 @@
+name: Unified Microservices CI/CD
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'gateway-service/**'
+      - 'content-service/**'
+      - 'user-service/**'
+      - 'playlist-service/**'
+
+env:
+  AWS_REGION: eu-north-1
+
+jobs:
+  # JOB 1: Detect which microservice folder actually changed
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      gateway: ${{ steps.filter.outputs.gateway }}
+      content: ${{ steps.filter.outputs.content }}
+      user: ${{ steps.filter.outputs.user }}
+      playlist: ${{ steps.filter.outputs.playlist }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Check Path Changes
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters:
+            gateway: 'gateway-service/**'
+            content: 'content-service/**'
+            user: 'user-service/**'
+            playlist: 'playlist-service/**'
+
+  # JOB 2: Deploy Gateway Service (Only runs if gateway-service folder changed)
+  deploy-gateway:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.gateway == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./gateway-service
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'maven'
+      - name: Build with Maven
+        run: mvn clean package -DskipTests
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Log in to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+      - name: Build and Push Image
+        run: |
+          docker build -t ${{ steps.login-ecr.outputs.registry }}/gateway-service:latest .
+          docker push ${{ steps.login-ecr.outputs.registry }}/gateway-service:latest
+      - name: Force ECS Deployment
+        run: |
+          aws ecs update-service --cluster yt-tv-cluster --service gateway-service --force-new-deployment --region ${{ env.AWS_REGION }}
+
+  # JOB 3: Deploy Content Service (Only runs if content-service folder changed)
+  deploy-content:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.content == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./content-service
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'maven'
+      - name: Build with Maven
+        run: mvn clean package -DskipTests
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Log in to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+      - name: Build and Push Image
+        run: |
+          docker build -t ${{ steps.login-ecr.outputs.registry }}/content-service:latest .
+          docker push ${{ steps.login-ecr.outputs.registry }}/content-service:latest
+      - name: Force ECS Deployment
+        run: |
+          aws ecs update-service --cluster yt-tv-cluster --service content-service --force-new-deployment --region ${{ env.AWS_REGION }}
+
+  # JOB 4: Deploy User Service (Only runs if user-service folder changed)
+  deploy-user:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.user == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./user-service
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'maven'
+      - name: Build with Maven
+        run: mvn clean package -DskipTests
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Log in to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+      - name: Build and Push Image
+        run: |
+          docker build -t ${{ steps.login-ecr.outputs.registry }}/user-service:latest .
+          docker push ${{ steps.login-ecr.outputs.registry }}/user-service:latest
+      - name: Force ECS Deployment
+        run: |
+          aws ecs update-service --cluster yt-tv-cluster --service user-service --force-new-deployment --region ${{ env.AWS_REGION }}
+
+  # JOB 5: Deploy Playlist Service (Only runs if playlist-service folder changed)
+  deploy-playlist:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.playlist == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./playlist-service
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'maven'
+      - name: Build with Maven
+        run: mvn clean package -DskipTests
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Log in to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+      - name: Build and Push Image
+        run: |
+          docker build -t ${{ steps.login-ecr.outputs.registry }}/playlist-service:latest .
+          docker push ${{ steps.login-ecr.outputs.registry }}/playlist-service:latest
+      - name: Force ECS Deployment
+        run: |
+          aws ecs update-service --cluster yt-tv-cluster --service playlist-service --force-new-deployment --region ${{ env.AWS_REGION }}
