@@ -42,21 +42,8 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.eureka == 'true'
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./eureka-server
     steps:
       - uses: actions/checkout@v4
-      
-      - uses: actions/setup-java@v4
-        with:
-          java-version: '21'
-          distribution: 'temurin'
-          cache: 'maven'
-
-      - name: Build Service and Dependencies
-        working-directory: .
-        run: mvn clean package -pl eureka-server -am -DskipTests
       
       - uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -68,8 +55,8 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v2
         
       - run: |
-          docker build -f ../Dockerfile.microservice -t ${{ steps.login-ecr.outputs.registry }}/eureka-server:latest .
-          docker push ${{ steps.login-ecr.outputs.registry }}/eureka-server:latest
+          docker build -f Dockerfile.microservice --build-arg MODULE_NAME=eureka-server -t ${{ steps.login-ecr.outputs.registry }}/yt-tv-eureka-server:latest .
+          docker push ${{ steps.login-ecr.outputs.registry }}/yt-tv-eureka-server:latest
           
       - run: |
           aws ecs update-service --cluster yt-tv-cluster --service yt-tv-eureka-service --force-new-deployment --region ${{ env.AWS_REGION }}
@@ -79,21 +66,8 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.gateway == 'true'
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./gateway-service
     steps:
       - uses: actions/checkout@v4
-      
-      - uses: actions/setup-java@v4
-        with:
-          java-version: '21'
-          distribution: 'temurin'
-          cache: 'maven'
-
-      - name: Build Service and Dependencies
-        working-directory: .
-        run: mvn clean package -pl gateway-service -am -DskipTests
       
       - uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -105,8 +79,8 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v2
         
       - run: |
-          docker build -f ../Dockerfile.microservice -t ${{ steps.login-ecr.outputs.registry }}/gateway-service:latest .
-          docker push ${{ steps.login-ecr.outputs.registry }}/gateway-service:latest
+          docker build -f Dockerfile.microservice --build-arg MODULE_NAME=gateway-service -t ${{ steps.login-ecr.outputs.registry }}/yt-tv-gateway-service:latest .
+          docker push ${{ steps.login-ecr.outputs.registry }}/yt-tv-gateway-service:latest
           
       - run: |
           aws ecs update-service --cluster yt-tv-cluster --service gateway-service --force-new-deployment --region ${{ env.AWS_REGION }}
@@ -116,21 +90,8 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.content == 'true'
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./content-service
     steps:
       - uses: actions/checkout@v4
-      
-      - uses: actions/setup-java@v4
-        with:
-          java-version: '21'
-          distribution: 'temurin'
-          cache: 'maven'
-
-      - name: Build Service and Dependencies
-        working-directory: .
-        run: mvn clean package -pl content-service -am -DskipTests
       
       - uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -142,8 +103,8 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v2
         
       - run: |
-          docker build -f ../Dockerfile.microservice -t ${{ steps.login-ecr.outputs.registry }}/content-service:latest .
-          docker push ${{ steps.login-ecr.outputs.registry }}/content-service:latest
+          docker build -f Dockerfile.microservice --build-arg MODULE_NAME=content-service -t ${{ steps.login-ecr.outputs.registry }}/yt-tv-content-service:latest .
+          docker push ${{ steps.login-ecr.outputs.registry }}/yt-tv-content-service:latest
           
       - run: |
           aws ecs update-service --cluster yt-tv-cluster --service content-service --force-new-deployment --region ${{ env.AWS_REGION }}
@@ -153,21 +114,8 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.user == 'true'
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./user-service
     steps:
       - uses: actions/checkout@v4
-      
-      - uses: actions/setup-java@v4
-        with:
-          java-version: '21'
-          distribution: 'temurin'
-          cache: 'maven'
-
-      - name: Build Service and Dependencies
-        working-directory: .
-        run: mvn clean package -pl user-service -am -DskipTests
       
       - uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -179,8 +127,8 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v2
         
       - run: |
-          docker build -f ../Dockerfile.microservice -t ${{ steps.login-ecr.outputs.registry }}/user-service:latest .
-          docker push ${{ steps.login-ecr.outputs.registry }}/user-service:latest
+          docker build -f Dockerfile.microservice --build-arg MODULE_NAME=user-service -t ${{ steps.login-ecr.outputs.registry }}/yt-tv-user-service:latest .
+          docker push ${{ steps.login-ecr.outputs.registry }}/yt-tv-user-service:latest
           
       - run: |
           aws ecs update-service --cluster yt-tv-cluster --service user-service --force-new-deployment --region ${{ env.AWS_REGION }}
@@ -190,21 +138,8 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.playlist == 'true'
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./playlist-service
     steps:
       - uses: actions/checkout@v4
-      
-      - uses: actions/setup-java@v4
-        with:
-          java-version: '21'
-          distribution: 'temurin'
-          cache: 'maven'
-
-      - name: Build Service and Dependencies
-        working-directory: .
-        run: mvn clean package -pl playlist-service -am -DskipTests
       
       - uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -216,8 +151,8 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v2
         
       - run: |
-          docker build -f ../Dockerfile.microservice -t ${{ steps.login-ecr.outputs.registry }}/playlist-service:latest .
-          docker push ${{ steps.login-ecr.outputs.registry }}/playlist-service:latest
+          docker build -f Dockerfile.microservice --build-arg MODULE_NAME=playlist-service -t ${{ steps.login-ecr.outputs.registry }}/yt-tv-playlist-service:latest .
+          docker push ${{ steps.login-ecr.outputs.registry }}/yt-tv-playlist-service:latest
           
       - run: |
           aws ecs update-service --cluster yt-tv-cluster --service playlist-service --force-new-deployment --region ${{ env.AWS_REGION }}
